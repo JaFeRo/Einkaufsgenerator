@@ -1,0 +1,675 @@
+<title>dAKZ Bonsimulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Courier+Prime:wght@400;700&display=swap">
+<style>
+/* Layout: Werkbank – links Einkauf bearbeiten, Mitte der Thermobon auf dem Tisch, rechts der Datenprüfer. */
+:root {
+  --desk: #E6EAE7;
+  --panel: #F8F9F8;
+  --ink: #17201B;
+  --muted: #5B6861;
+  --line: #D2D9D4;
+  --accent: #0D6A4A;
+  --accent-soft: #D8EDE3;
+  --ok: #1D7A46;
+  --warn: #A86512;
+  --err: #B83A12;
+  --paper: #FFFFFD;
+  --paper-ink: #1E1E1E;
+  --shadow: 0 1px 2px rgba(20,40,30,.08), 0 12px 32px -12px rgba(20,40,30,.28);
+  --font-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --font-receipt: "Courier Prime", "Courier New", ui-monospace, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --desk: #101513; --panel: #171D1A; --ink: #E2E8E4; --muted: #94A39B; --line: #2A332E;
+    --accent: #4CC08E; --accent-soft: #1B3328; --ok: #5CC98A; --warn: #E0A54A; --err: #F07A52;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 16px 40px -12px rgba(0,0,0,.7);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --desk: #101513; --panel: #171D1A; --ink: #E2E8E4; --muted: #94A39B; --line: #2A332E;
+  --accent: #4CC08E; --accent-soft: #1B3328; --ok: #5CC98A; --warn: #E0A54A; --err: #F07A52;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 16px 40px -12px rgba(0,0,0,.7);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--desk); color: var(--ink); font: 14px/1.5 var(--font-ui); }
+.wrap { padding-inline: 16px; padding-block: 0 48px; max-width: 1480px; margin: 0 auto; }
+
+/* Kopfzeile */
+header.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding-block: 18px 14px; }
+.brand { display: flex; align-items: baseline; gap: 10px; }
+.brand h1 { font: 800 22px/1 var(--font-display); font-stretch: 80%; letter-spacing: .01em; margin: 0; text-transform: uppercase; }
+.brand .tag { font: 500 11px/1 var(--font-data); color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+nav.tabs { display: flex; gap: 4px; margin-left: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 3px; }
+nav.tabs button { font: 600 13px var(--font-ui); border: 0; background: transparent; color: var(--muted); padding: 6px 14px; border-radius: 6px; cursor: pointer; }
+nav.tabs button[aria-selected="true"] { background: var(--accent); color: var(--panel); }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Werkbank */
+.bench { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+@media (min-width: 900px) { .bench { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); } .inspector { grid-column: 1 / -1; } }
+@media (min-width: 1280px) { .bench { grid-template-columns: minmax(0, 1.1fr) 380px minmax(0, 1fr); } .inspector { grid-column: auto; } }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+.panel > h2 { font: 700 13px/1 var(--font-display); font-stretch: 85%; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0; padding: 14px 16px 0; }
+.section { padding: 12px 16px 16px; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
+.section:last-child { border-bottom: 0; }
+.section h3 { font: 600 12px/1 var(--font-ui); margin: 0; color: var(--ink); display: flex; justify-content: space-between; align-items: center; }
+.section h3 small { font-weight: 400; color: var(--muted); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 500 12px var(--font-ui); border: 1px solid var(--line); background: var(--desk); color: var(--ink); padding: 5px 10px; border-radius: 999px; cursor: pointer; }
+.chip:hover { border-color: var(--accent); }
+.chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 10px; }
+label.f { display: grid; gap: 3px; font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: .02em; }
+input, select, textarea { font: 13px var(--font-ui); color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; min-width: 0; width: 100%; }
+input.num { font-family: var(--font-data); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Positionen */
+.pos-wrap { overflow-x: auto; margin-inline: -4px; }
+table.pos { width: 100%; border-collapse: collapse; min-width: 540px; }
+table.pos th { font: 500 10px var(--font-ui); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); text-align: left; padding: 0 4px 4px; }
+table.pos td { padding: 3px 4px; vertical-align: middle; }
+table.pos td.sum { font: 13px var(--font-data); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.pos input, table.pos select { padding: 5px 6px; }
+.icon-btn { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 4px 6px; border-radius: 4px; }
+.icon-btn:hover { color: var(--err); background: var(--desk); }
+.btn { font: 600 13px var(--font-ui); border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 7px 12px; border-radius: 7px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.check { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; }
+.check input { width: auto; margin-top: 3px; }
+.check span small { display: block; color: var(--muted); font-size: 11px; }
+
+/* Bon */
+.stage { display: grid; justify-items: center; align-content: start; gap: 14px; min-width: 0; }
+.stage-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.receipt {
+  width: min(100%, 340px); background: var(--paper); color: var(--paper-ink); font: 13px/1.35 var(--font-receipt);
+  padding: 22px 20px 26px; box-shadow: var(--shadow); position: relative;
+  -webkit-mask: radial-gradient(circle 5px at 50% 100%, transparent 98%, #000) 0 0/12px 100% repeat-x,
+                linear-gradient(#000, #000) 0 0/100% calc(100% - 5px) no-repeat;
+}
+.receipt .c { text-align: center; }
+.receipt .b { font-weight: 700; }
+.receipt .big { font-size: 17px; letter-spacing: .02em; }
+.receipt .rule { border-top: 1px dashed var(--paper-ink); margin: 8px 0; opacity: .7; }
+.receipt .stars { overflow: hidden; white-space: nowrap; margin: 6px 0; letter-spacing: .1em; }
+.receipt .ln { display: flex; justify-content: space-between; gap: 8px; font-variant-numeric: tabular-nums; }
+.receipt .ln > :first-child { min-width: 0; overflow-wrap: anywhere; }
+.receipt .ln > :last-child { white-space: nowrap; }
+.receipt .sub { padding-left: 14px; font-size: 12px; }
+.receipt .sig { font-size: 10.5px; overflow-wrap: anywhere; line-height: 1.3; }
+.receipt .qr-block { display: grid; justify-items: center; gap: 4px; margin-top: 10px; }
+.receipt .qr-block svg { width: 100%; max-width: 250px; height: auto; display: block; }
+.receipt .qr-cap { font-size: 11px; text-align: center; }
+.receipt .stamp {
+  position: absolute; top: 46%; left: 50%; transform: translate(-50%, -50%) rotate(-18deg);
+  font: 800 34px/1 var(--font-display); font-stretch: 75%; letter-spacing: .12em; color: #C0392B; opacity: .14;
+  border: 4px solid currentColor; padding: 6px 14px; pointer-events: none; white-space: nowrap;
+}
+.qr-err { font: 12px var(--font-ui); color: #B83A12; text-align: center; border: 1px dashed #B83A12; padding: 10px; }
+
+/* Prüfer */
+.status { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.pill { font: 600 12px var(--font-ui); padding: 4px 10px; border-radius: 999px; display: inline-flex; gap: 6px; align-items: center; }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pill.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.pill.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 16%, transparent); }
+.pill.err { color: var(--err); background: color-mix(in srgb, var(--err) 14%, transparent); }
+.meta { font: 12px var(--font-data); color: var(--muted); }
+.code-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.code-tabs button { font: 500 12px var(--font-data); border: 1px solid var(--line); background: var(--desk); color: var(--ink); padding: 3px 9px; border-radius: 5px; cursor: pointer; }
+.code-tabs button[aria-selected="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.meter { display: grid; gap: 4px; }
+.meter .bar { height: 8px; background: var(--desk); border-radius: 4px; overflow: hidden; border: 1px solid var(--line); }
+.meter .bar i { display: block; height: 100%; background: var(--accent); }
+.meter .bar i.over { background: var(--err); }
+.meter .lbl { display: flex; justify-content: space-between; font: 11px var(--font-data); color: var(--muted); font-variant-numeric: tabular-nums; }
+pre.csv { margin: 0; font: 12px/1.6 var(--font-data); background: var(--desk); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow-x: auto; max-height: 340px; white-space: pre; }
+pre.csv .t { font-weight: 600; display: inline-block; width: 1.2em; }
+pre.csv .K { color: var(--accent); } pre.csv .E { color: #7A5AC2; } pre.csv .M { color: var(--warn); } pre.csv .P { color: var(--ink); }
+pre.csv .sep { color: var(--muted); opacity: .7; }
+pre.csv .lf { color: var(--muted); opacity: .55; font-size: 10px; }
+ul.findings { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+ul.findings li { font-size: 12.5px; padding: 6px 10px 6px 12px; border-radius: 6px; background: var(--desk); border-left: 3px solid var(--line); overflow-wrap: anywhere; }
+ul.findings li.err { border-left-color: var(--err); }
+ul.findings li.warn { border-left-color: var(--warn); }
+ul.findings li.ok { border-left-color: var(--ok); }
+.fields { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 2px 10px; font-size: 12px; }
+.fields dt { font-family: var(--font-data); color: var(--muted); }
+.fields dd { margin: 0; font-family: var(--font-data); overflow-wrap: anywhere; }
+.fields .nm { color: var(--muted); font-size: 11px; }
+
+/* Scanmodus */
+.scan { position: fixed; inset: 0; background: #FFFFFF; color: #111; display: grid; grid-template-rows: auto 1fr auto; z-index: 10;
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px); }
+.scan .bar-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; font: 600 14px var(--font-ui); }
+.scan .qr-big { display: grid; place-items: center; min-height: 0; }
+.scan .qr-big svg { width: min(86vmin, 640px); height: auto; }
+.scan .bar-bottom { display: flex; justify-content: center; gap: 10px; }
+.scan button { font: 600 14px var(--font-ui); border: 1px solid #ccc; background: #fff; color: #111; padding: 10px 18px; border-radius: 8px; cursor: pointer; }
+
+/* Plan */
+.plan { max-width: 980px; margin: 0 auto; display: grid; gap: 20px; }
+.plan .panel { padding: 22px 26px; }
+.plan h2 { font: 800 24px/1.15 var(--font-display); font-stretch: 85%; margin: 0 0 6px; text-wrap: balance; }
+.plan h3 { font: 700 15px/1.3 var(--font-display); font-stretch: 90%; margin: 18px 0 6px; letter-spacing: .01em; }
+.plan p, .plan li { max-width: 72ch; }
+.plan ul, .plan ol { padding-left: 20px; margin: 6px 0; display: grid; gap: 4px; }
+.plan code { font: 12.5px var(--font-data); background: var(--desk); padding: 1px 5px; border-radius: 4px; }
+.plan table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.plan .tbl { overflow-x: auto; }
+.plan th, .plan td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.plan th { font: 600 11px var(--font-ui); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.phase { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 4px 16px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.phase:last-child { border-bottom: 0; }
+.phase .when { font: 600 12px var(--font-data); color: var(--accent); padding-top: 2px; }
+.phase h4 { margin: 0; font: 600 14px var(--font-ui); }
+.phase p { margin: 2px 0 0; color: var(--muted); }
+.callout { border: 1px solid var(--line); border-left: 3px solid var(--warn); border-radius: 6px; padding: 10px 14px; background: var(--desk); }
+.lead { font-size: 15px; color: var(--muted); margin: 0; }
+@media (prefers-reduced-motion: no-preference) { .receipt { transition: transform .25s ease; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><h1>dAKZ Bonsimulator</h1><span class="tag">QR-Spec v1.2 · Testdaten</span></div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" id="tab-sim" aria-selected="true" data-view="sim">Simulator</button>
+      <button role="tab" id="tab-plan" aria-selected="false" data-view="plan">Design &amp; Plan</button>
+    </nav>
+  </header>
+
+  <main id="view-sim" class="bench">
+    <!-- Einkauf -->
+    <section class="panel" aria-labelledby="h-einkauf">
+      <h2 id="h-einkauf">Einkauf</h2>
+      <div class="section">
+        <h3>Szenario <small>füllt den Bon mit Testdaten</small></h3>
+        <div class="chips" id="scenarios">
+          <button class="chip" data-s="zoll61">Zoll-Beispiel 6.1</button>
+          <button class="chip" data-s="random" aria-pressed="true">Zufallseinkauf</button>
+          <button class="chip" data-s="fiveRates">5 Steuersätze</button>
+          <button class="chip" data-s="kg">Wiegeware (kg)</button>
+          <button class="chip" data-s="edge">Grenze 50,01 €</button>
+          <button class="chip" data-s="overflow">Überlauf (3 Codes)</button>
+        </div>
+      </div>
+      <div class="section">
+        <h3>Kopfdaten</h3>
+        <div class="grid2">
+          <label class="f">Händler (nur Bon)<input id="merchant" value="Kaufhaus Rheinbrücke"></label>
+          <label class="f">Ort (nur Bon)<input id="city" value="Marktstätte 4 · 78462 Konstanz"></label>
+          <label class="f">BON_NR (K4)<input id="bonNr" class="num" inputmode="numeric"></label>
+          <label class="f">Externe Referenz (E6)<input id="externalRef"></label>
+          <label class="f">BON_START (K5, lokal)<input id="start" type="datetime-local" step="1"></label>
+          <label class="f">Dauer in s (K6 − K5)<input id="duration" class="num" type="number" min="0" value="12"></label>
+        </div>
+      </div>
+      <div class="section">
+        <h3>Positionen <small id="posCount"></small></h3>
+        <div class="pos-wrap">
+          <table class="pos">
+            <thead><tr><th>Artikeltext (P7)</th><th>Menge</th><th>Einheit</th><th>Einzelpreis</th><th>MwSt</th><th title="Erstattungsfähig (P3)">Erst.</th><th style="text-align:right">Brutto</th><th></th></tr></thead>
+            <tbody id="posBody"></tbody>
+          </table>
+        </div>
+        <div class="row">
+          <button class="btn" id="addPos">+ Position</button>
+          <button class="btn" id="addRandom">+ Zufallsartikel</button>
+          <button class="btn" id="newTse">TSE-Daten neu würfeln</button>
+        </div>
+      </div>
+      <div class="section">
+        <h3>QR-Erzeugung</h3>
+        <div class="grid2">
+          <label class="f">Profil
+            <select id="profile">
+              <option value="spec">Spezifikation: ECC Q · max. 1.663 Byte</option>
+              <option value="examples">Wie Zoll-Beispiele: ECC M · max. 2.331 Byte</option>
+              <option value="literal">Wortlaut 2.420 Zeichen bei ECC Q</option>
+              <option value="custom">Eigene Werte</option>
+            </select>
+          </label>
+          <label class="f">Fehlerkorrektur
+            <select id="ecc"><option>L</option><option>M</option><option selected>Q</option><option>H</option></select>
+          </label>
+          <label class="f">Grenze je Code (Byte)<input id="limit" class="num" type="number" min="200" value="1663"></label>
+          <label class="f">Steuersatz-Format
+            <select id="rateStyle"><option value="plain">19 (wie Beispiele)</option><option value="fixed">19,00 (wie Feldbeispiel)</option></select>
+          </label>
+        </div>
+        <label class="check"><input type="checkbox" id="trailingLF" checked><span>Abschließendes LF<small>EBNF verlangt LF nach jedem record; Beispiel 6.1 lässt es weg</small></span></label>
+        <label class="check"><input type="checkbox" id="alwaysTotal"><span>K3 Gesamtanzahl immer schreiben<small>Pflicht erst ab zwei Codes, sonst optional</small></span></label>
+      </div>
+      <div class="section">
+        <h3>Fehler einbauen <small>für Negativtests der App</small></h3>
+        <div class="chips" id="faults">
+          <button class="chip" data-f="totalMismatch" aria-pressed="false">K7 ≠ Summe</button>
+          <button class="chip" data-f="endBeforeStart" aria-pressed="false">Ende vor Start</button>
+          <button class="chip" data-f="dropE" aria-pressed="false">E-Zeile fehlt</button>
+          <button class="chip" data-f="crlf" aria-pressed="false">CRLF statt LF</button>
+          <button class="chip" data-f="noPositions" aria-pressed="false">Keine Positionen</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bon -->
+    <section class="stage" aria-label="Kassenbon">
+      <div class="stage-actions">
+        <button class="btn primary" id="nextBon">Nächster Bon</button>
+        <button class="btn" id="scanMode">Scanmodus</button>
+      </div>
+      <article class="receipt" id="receipt"></article>
+    </section>
+
+    <!-- Prüfer -->
+    <section class="panel inspector" aria-labelledby="h-daten">
+      <h2 id="h-daten">QR-Inhalt &amp; Prüfung</h2>
+      <div class="status" id="status"></div>
+      <div class="section">
+        <div class="row" style="justify-content:space-between">
+          <div class="code-tabs" id="codeTabs" role="tablist"></div>
+          <button class="btn" id="copy">CSV kopieren</button>
+        </div>
+        <div class="meter" id="meter"></div>
+        <pre class="csv" id="csv"></pre>
+      </div>
+      <div class="section">
+        <h3>Befunde</h3>
+        <ul class="findings" id="findings"></ul>
+      </div>
+      <div class="section">
+        <h3>Kopfzeile entschlüsselt</h3>
+        <dl class="fields" id="fields"></dl>
+      </div>
+    </section>
+  </main>
+
+  <main id="view-plan" class="plan" hidden>
+    <section class="panel">
+      <h2>Design &amp; Plan</h2>
+      <p class="lead">Ein Simulator, der realistische Kassenbons mit dAKZ-QR-Codes nach der „Schnittstellendefinition QR-Code“ der Generalzolldirektion (Version 1.2 vom 01.09.2026) erzeugt, damit das Einscannen mit der eZOLL-App (Dienst „Ausfuhrkassenzettel“) oder eigenen Scannern getestet werden kann. Dieser Prototyp ist bereits voll funktionsfähig; der Plan beschreibt den Weg zur fertigen App.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Was die Spezifikation verlangt</h2>
+      <div class="tbl"><table>
+        <thead><tr><th>Zeile</th><th>Häufigkeit</th><th>Felder</th></tr></thead>
+        <tbody>
+          <tr><td><code>K</code> Kopf</td><td>genau 1</td><td>Nummer · Gesamtanzahl · BON_NR · BON_START · BON_ENDE (Unix-Sekunden, UTC) · UMS_BRUTTO (&gt; 50,00 €)</td></tr>
+          <tr><td><code>E</code> Erweitert</td><td>genau 1 (nur Primärcode)</td><td>UMS_NETTO · MWST · TSE_TA_SIG · TSE_PUBLIC_KEY (Base64) · externeKundenReferenz</td></tr>
+          <tr><td><code>M</code> MwSt</td><td>1–5 (nur Primärcode)</td><td>MWST_SATZ · UMS_BRUTTO · UMS_NETTO · MWST je Steuersatz</td></tr>
+          <tr><td><code>P</code> Position</td><td>1–1000</td><td>MWST_SATZ · ERSTATTUNGSFAEHIG · UMS_BRUTTO · MENGE · EINHEIT · ARTIKELTEXT</td></tr>
+        </tbody>
+      </table></div>
+      <p>CSV nach RFC 4180 mit Semikolon, LF als Zeilenende, UTF-8, keine Überschriftenzeile, Dezimalkomma. Passt der Inhalt nicht in einen Code, folgen Codes mit nur <code>K</code>- und <code>P</code>-Zeilen; Zeilen werden nie getrennt.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Auffälligkeiten in der Spezifikation</h2>
+      <p>Ich habe die Beispiel-QR-Codes aus dem PDF dekodiert und mit dem Text verglichen. Der Simulator macht diese Punkte einstellbar, damit sich beide Lesarten testen lassen.</p>
+      <ul>
+        <li><b>Kapazität:</b> 2.420 Zeichen ist die Grenze für den <i>alphanumerischen</i> QR-Modus bei ECC Q. Der Inhalt enthält aber Kleinbuchstaben, Semikolons und Umlaute und braucht deshalb den Byte-Modus. Dort fasst Version 40 bei ECC Q nur 1.663 Byte. Ein Kassensystem, das sich an 2.420 hält, kann bei ECC Q keinen Code erzeugen.</li>
+        <li><b>ECC-Level der Beispiele:</b> Die Beispiele 6.1 und 6.2 sind mit ECC L kodiert, der Primärcode in 6.3 mit ECC M und 2.325 Byte, nicht mit dem vorgeschriebenen Q.</li>
+        <li><b>Abschließendes LF:</b> Laut EBNF endet jede Zeile mit LF. Beispiel 6.1 und 6.3 haben am Ende keins, 6.2 schon.</li>
+        <li><b>Summen in den Beispielen:</b> In 6.2 stimmen E2/E3 nicht mit den M-Zeilen überein (44,72 statt 45,70), in 6.3 weicht K7 um 3 Cent von der M-Summe ab. Konsistenzregeln sind nicht spezifiziert; der Prüfer meldet sie als Warnung.</li>
+        <li><b>Regex-Details:</b> P2/M2 enthalten im PDF ein Leerzeichen (<code>^\d{1,2} (,\d{1,2})?$</code>), das so kein Beispiel erfüllt. K4 nennt 13 Ziffern, die Regex erlaubt höchstens 10<sup>12</sup>. Der Steuersatz steht im Feldbeispiel als „19,00“, in allen Beispielen als „19“.</li>
+        <li><b>Händlerdaten fehlen im Code:</b> Name und Adresse stecken nicht im QR-Code; die App ordnet den Einkauf über die Anmeldung des Unternehmens zu. Der Simulator druckt sie nur auf den Bon.</li>
+      </ul>
+      <p class="callout">Beispiel 6.1 reproduziert der Generator byte-genau (ohne abschließendes LF). Die drei dekodierten Beispielcodes werden in der fertigen App zu Referenz-Tests.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Design</h2>
+      <h3>Leitidee: die Werkbank</h3>
+      <p>Drei Zonen nebeneinander, auf schmalen Bildschirmen untereinander. Links wird der Einkauf zusammengestellt, in der Mitte liegt der Thermobon so, wie er aus der Kasse käme, rechts zeigt der Prüfer, was im QR-Code steht und ob es der Spezifikation entspricht. Jede Änderung wirkt sofort auf Bon und Prüfung.</p>
+      <h3>Bausteine</h3>
+      <ul>
+        <li><b>Szenarien</b> als Chips: Zoll-Beispiel, Zufall, fünf Steuersätze, Wiegeware, Grenzfall 50,01 €, Überlauf. Ein Klick erzeugt einen vollständigen Bon.</li>
+        <li><b>Bon</b> im 80-mm-Format mit Courier-Schrift, Abrisskante, TSE-Block und QR-Codes mit Beschriftung „1/3“. Ein blasser Stempel „TESTBELEG“ verhindert Verwechslung mit echten Belegen.</li>
+        <li><b>Scanmodus</b>: QR-Code bildschirmfüllend auf Weiß, Wechsel zwischen Teil-Codes mit Pfeiltasten. So lässt sich direkt vom Monitor mit dem Handy scannen.</li>
+        <li><b>Prüfer</b>: Statuspille (gültig, Warnungen, Fehler), Füllstand je Code gegen die gewählte Grenze, CSV mit farbig markierten Zeilentypen, Befundliste mit Feld-ID und Regex.</li>
+        <li><b>Fehler einbauen</b>: absichtlich ungültige Codes für Negativtests (Summen falsch, Zeilen fehlen, CRLF).</li>
+      </ul>
+      <h3>Gestaltung</h3>
+      <p>Kühles Grau-Grün als Tisch, ein dunkles Zollgrün als einzige Akzentfarbe, Papierweiß nur für den Bon. Archivo (schmal) für Überschriften, IBM Plex Sans und Mono für Oberfläche und Daten, Courier Prime für den Bon. Hell- und Dunkelmodus; der Bon bleibt in beiden Modi weiß, weil er Papier darstellt.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Technischer Plan</h2>
+      <h3>Stack</h3>
+      <ul>
+        <li><b>Vite + TypeScript + React</b>, rein clientseitig, keine Server-Komponente. Statisches Hosting über GitHub Pages.</li>
+        <li><b>Kernbibliothek</b> <code>src/dakz/</code> ohne UI-Abhängigkeit: Typen, Berechnung in Cent, CSV-Serialisierung, Aufteilung auf mehrere Codes, Validator mit den Regex-Ausdrücken der Spezifikation.</li>
+        <li><b>QR-Erzeugung</b> mit einer Bibliothek, die Byte-Modus, feste ECC-Stufe und Versionsangabe beherrscht (z. B. <code>qrcode</code> oder <code>qrcode-generator</code>).</li>
+        <li><b>Tests</b> mit Vitest: Golden-Tests gegen die dekodierten Zoll-Beispiele, Property-Tests (zufällige Bons → Validator ohne Fehler → QR dekodierbar), Rundlauf mit <code>zxing-wasm</code>.</li>
+        <li><b>Playwright</b>: Screenshot des Bons, Dekodieren des gerenderten QR-Codes, Vergleich mit dem erzeugten CSV.</li>
+      </ul>
+      <h3>Phasen</h3>
+      <div class="phase"><span class="when">Phase 1</span><div><h4>Kern &amp; Tests</h4><p>Prototyp-Logik nach TypeScript portieren, Referenztests aus den Zoll-Beispielen, Grenzwerttests für alle Regex-Felder.</p></div></div>
+      <div class="phase"><span class="when">Phase 2</span><div><h4>Werkbank-Oberfläche</h4><p>Editor, Bon, Prüfer und Scanmodus als React-Komponenten; Zustand in der URL, damit sich ein Bon als Link teilen lässt.</p></div></div>
+      <div class="phase"><span class="when">Phase 3</span><div><h4>Ausgabe</h4><p>Druckansicht für 58- und 80-mm-Thermodrucker (<code>@media print</code>), Export als PNG, PDF und CSV, Serienerzeugung von z. B. 50 Bons als ZIP.</p></div></div>
+      <div class="phase"><span class="when">Phase 4</span><div><h4>Rückprüfung</h4><p>Eigener Scanner per Kamera oder Bild-Upload, der einen gescannten Code gegen die Spezifikation prüft. Hilft beim Test fremder Kassensysteme.</p></div></div>
+      <div class="phase"><span class="when">Phase 5</span><div><h4>Feinschliff</h4><p>Echte ECDSA-Signaturen über WebCrypto statt Zufalls-Base64, Verlauf der erzeugten Bons, Deployment über GitHub Actions.</p></div></div>
+      <h3>Offene Fragen</h3>
+      <ol>
+        <li>Welches Profil soll Standard sein: streng nach Text (ECC Q, 1.663 Byte) oder wie die Beispiele (ECC M)?</li>
+        <li>Soll gedruckt werden (Thermodrucker) oder reicht das Scannen vom Bildschirm?</li>
+        <li>React oder lieber schlank ohne Framework? Hosting über GitHub Pages in Ordnung?</li>
+        <li>Wird die Rückprüfung fremder Codes (Phase 4) gebraucht?</li>
+      </ol>
+    </section>
+  </main>
+</div>
+
+<div class="scan" id="scan" hidden>
+  <div class="bar-top"><span id="scanTitle"></span><button id="scanClose">Schließen</button></div>
+  <div class="qr-big" id="scanQr"></div>
+  <div class="bar-bottom"><button id="scanPrev">← Vorheriger</button><button id="scanNext">Nächster →</button></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="dakz-core.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var PROFILES = { spec: ['Q', 1663], examples: ['M', 2331], literal: ['Q', 2420] };
+  var state = { receipt: null, faults: {}, activeCode: 0, scanIndex: 0, result: null, seed: 1 };
+
+  // ---------- Szenarien ----------
+  function scenario(name) {
+    var r;
+    state.seed = Math.floor(Math.random() * 1e9);
+    if (name === 'zoll61') r = DAKZ.example61();
+    else if (name === 'fiveRates') {
+      r = DAKZ.randomReceipt(state.seed, 1);
+      r.positions = [
+        { text: 'Nasenspray', vat: 7, unitPrice: 3.50, qty: 1, unit: 'Stück' },
+        { text: 'Volvic Tea Zero', vat: 8, unitPrice: 5.94, qty: 1, unit: 'Stück' },
+        { text: 'Vollkorntoast', vat: 13, unitPrice: 1.99, qty: 1, unit: 'Stück' },
+        { text: 'Sonstige Filme', vat: 19, unitPrice: 16.99, qty: 2, unit: 'Stück' },
+        { text: 'Presse Erzeugnisse', vat: 21, unitPrice: 9.80, qty: 1, unit: 'Stück' }
+      ];
+    } else if (name === 'kg') {
+      r = DAKZ.randomReceipt(state.seed, 1);
+      r.positions = [
+        { text: 'Bergkäse am Stück', vat: 7, unitPrice: 24.90, qty: 0.648, unit: 'kg' },
+        { text: 'Schwarzwälder Schinken', vat: 7, unitPrice: 32.50, qty: 0.412, unit: 'kg' },
+        { text: 'Kirschwasser 0,7 l', vat: 19, unitPrice: 29.90, qty: 1, unit: 'Flasche' },
+        { text: 'Pralinen "Edition Bodensee"', vat: 7, unitPrice: 14.95, qty: 2, unit: 'Stück' }
+      ];
+    } else if (name === 'edge') {
+      r = DAKZ.randomReceipt(state.seed, 1);
+      r.positions = [
+        { text: 'Gesichtscreme 50 ml', vat: 19, unitPrice: 34.95, qty: 1, unit: 'Stück' },
+        { text: 'Handcreme', vat: 19, unitPrice: 15.06, qty: 1, unit: 'Stück' }
+      ];
+    } else if (name === 'overflow') {
+      r = DAKZ.randomReceipt(state.seed, 34);
+      r.positions.forEach(function (p, i) { p.text += ' – Art.-Nr. ' + (400100 + i * 7) + ', Farbe Anthrazit, Größe M'; });
+    } else r = DAKZ.randomReceipt(state.seed);
+    r.positions.forEach(function (p) { if (p.refundable === undefined) p.refundable = true; });
+    state.receipt = r;
+    writeForm();
+    render();
+  }
+
+  // ---------- Formular ----------
+  function toLocalInput(epoch) {
+    var d = new Date(epoch * 1000);
+    var off = d.getTimezoneOffset() * 60000;
+    return new Date(d - off).toISOString().slice(0, 19);
+  }
+  function fromLocalInput(v) { var t = new Date(v).getTime(); return isNaN(t) ? state.receipt.start : Math.floor(t / 1000); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function eur(cents) { return DAKZ.money(cents); }
+
+  function writeForm() {
+    var r = state.receipt;
+    $('bonNr').value = r.bonNr;
+    $('externalRef').value = r.externalRef || '';
+    $('start').value = toLocalInput(r.start);
+    $('duration').value = r.end - r.start;
+    var rows = r.positions.map(function (p, i) {
+      var rates = [0, 7, 19, 5, 8, 13, 21].map(function (v) { return '<option' + (v === p.vat ? ' selected' : '') + '>' + v + '</option>'; }).join('');
+      return '<tr data-i="' + i + '">' +
+        '<td><input data-k="text" id="p' + i + 't" value="' + esc(p.text) + '"></td>' +
+        '<td style="width:74px"><input data-k="qty" id="p' + i + 'q" class="num" value="' + String(p.qty).replace('.', ',') + '"></td>' +
+        '<td style="width:78px"><input data-k="unit" id="p' + i + 'u" value="' + esc(p.unit || 'Stück') + '"></td>' +
+        '<td style="width:92px"><input data-k="unitPrice" id="p' + i + 'p" class="num" value="' + p.unitPrice.toFixed(2).replace('.', ',') + '"></td>' +
+        '<td style="width:64px"><select data-k="vat" id="p' + i + 'v">' + rates + '</select></td>' +
+        '<td style="width:40px;text-align:center"><input data-k="refundable" id="p' + i + 'r" type="checkbox"' + (p.refundable !== false ? ' checked' : '') + ' style="width:auto"></td>' +
+        '<td class="sum" data-sum="' + i + '"></td>' +
+        '<td><button class="icon-btn" data-del="' + i + '" aria-label="Position entfernen">×</button></td></tr>';
+    });
+    $('posBody').innerHTML = rows.join('');
+  }
+
+  function num(v) { var n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? 0 : n; }
+
+  $('posBody').addEventListener('input', function (e) {
+    var tr = e.target.closest('tr'); if (!tr) return;
+    var p = state.receipt.positions[+tr.dataset.i], k = e.target.dataset.k;
+    if (k === 'qty' || k === 'unitPrice') p[k] = num(e.target.value);
+    else if (k === 'vat') p.vat = +e.target.value;
+    else if (k === 'refundable') p.refundable = e.target.checked;
+    else p[k] = e.target.value;
+    render();
+  });
+  $('posBody').addEventListener('click', function (e) {
+    var d = e.target.closest('[data-del]'); if (!d) return;
+    state.receipt.positions.splice(+d.dataset.del, 1); writeForm(); render();
+  });
+  ['bonNr', 'externalRef', 'start', 'duration', 'merchant', 'city'].forEach(function (id) {
+    $(id).addEventListener('input', function () {
+      var r = state.receipt;
+      r.bonNr = $('bonNr').value.trim();
+      r.externalRef = $('externalRef').value;
+      r.start = fromLocalInput($('start').value);
+      r.end = r.start + Math.max(0, parseInt($('duration').value || '0', 10));
+      render();
+    });
+  });
+  $('addPos').onclick = function () { state.receipt.positions.push({ text: 'Neuer Artikel', vat: 19, unitPrice: 10, qty: 1, unit: 'Stück', refundable: true }); writeForm(); render(); };
+  $('addRandom').onclick = function () { var x = DAKZ.randomReceipt(Math.floor(Math.random() * 1e9), 1).positions[0]; state.receipt.positions.push(x); writeForm(); render(); };
+  $('newTse').onclick = function () { var t = DAKZ.fakeTse(DAKZ.rnd(Math.floor(Math.random() * 1e9))); state.receipt.tseSignature = t.signature; state.receipt.tsePublicKey = t.publicKey; render(); };
+  $('nextBon').onclick = function () { pressScenario('random'); scenario('random'); };
+
+  function pressScenario(s) { document.querySelectorAll('#scenarios .chip').forEach(function (c) { c.setAttribute('aria-pressed', c.dataset.s === s); }); }
+  $('scenarios').addEventListener('click', function (e) { var c = e.target.closest('.chip'); if (!c) return; pressScenario(c.dataset.s); scenario(c.dataset.s); });
+  $('faults').addEventListener('click', function (e) {
+    var c = e.target.closest('.chip'); if (!c) return;
+    var on = c.getAttribute('aria-pressed') !== 'true'; c.setAttribute('aria-pressed', on);
+    state.faults[c.dataset.f] = on; render();
+  });
+  $('profile').onchange = function () {
+    var p = PROFILES[this.value]; if (p) { $('ecc').value = p[0]; $('limit').value = p[1]; } render();
+  };
+  ['ecc', 'limit'].forEach(function (id) { $(id).addEventListener('input', function () { $('profile').value = 'custom'; render(); }); });
+  ['rateStyle', 'trailingLF', 'alwaysTotal'].forEach(function (id) { $(id).addEventListener('change', render); });
+
+  // ---------- QR ----------
+  function qrSvg(text, ecc) {
+    qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+    var q = qrcode(0, ecc);
+    q.addData(text, 'Byte');
+    q.make();
+    var n = q.getModuleCount(), quiet = 4, size = n + quiet * 2, d = '';
+    for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) if (q.isDark(y, x)) d += 'M' + (x + quiet) + ' ' + (y + quiet) + 'h1v1h-1z';
+    return {
+      version: (n - 17) / 4,
+      svg: '<svg viewBox="0 0 ' + size + ' ' + size + '" shape-rendering="crispEdges" role="img" aria-label="QR-Code"><rect width="' + size + '" height="' + size + '" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>'
+    };
+  }
+
+  // ---------- Darstellung ----------
+  function fmtDate(epoch, utc) {
+    var d = new Date(epoch * 1000);
+    var p = function (n) { return String(n).padStart(2, '0'); };
+    if (utc) return p(d.getUTCDate()) + '.' + p(d.getUTCMonth() + 1) + '.' + d.getUTCFullYear() + ' ' + p(d.getUTCHours()) + ':' + p(d.getUTCMinutes()) + ':' + p(d.getUTCSeconds());
+    return p(d.getDate()) + '.' + p(d.getMonth() + 1) + '.' + d.getFullYear() + '  ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  function render() {
+    var r = state.receipt;
+    var opts = {
+      rateStyle: $('rateStyle').value, trailingLF: $('trailingLF').checked, alwaysWriteTotal: $('alwaysTotal').checked,
+      limitBytes: Math.max(200, parseInt($('limit').value || '1663', 10)),
+      lineBreak: state.faults.crlf ? '\r\n' : '\n', faults: state.faults
+    };
+    var ecc = $('ecc').value;
+    var res = DAKZ.generate(r, opts);
+    res.codes.forEach(function (c) {
+      c.check = DAKZ.validate(c.text, { limitBytes: opts.limitBytes });
+      try { c.qr = qrSvg(c.text, ecc); } catch (err) { c.qr = null; c.qrError = 'Passt nicht in QR Version 40 bei ECC ' + ecc + ' (' + c.bytes + ' Byte).'; }
+    });
+    state.result = res;
+    if (state.activeCode >= res.codes.length) state.activeCode = 0;
+
+    // Positionssummen im Editor
+    r.positions.forEach(function (p, i) { var td = document.querySelector('[data-sum="' + i + '"]'); if (td) td.textContent = eur(DAKZ.positionGross(p)); });
+    $('posCount').textContent = r.positions.length + ' Stück · ' + eur(res.totals.gross) + ' €';
+
+    renderReceipt(res);
+    renderInspector(res);
+    if (!$('scan').hidden) renderScan();
+  }
+
+  function renderReceipt(res) {
+    var r = state.receipt, t = res.totals, h = [];
+    h.push('<div class="stamp">TESTBELEG</div>');
+    h.push('<div class="c b big">' + esc($('merchant').value) + '</div>');
+    h.push('<div class="c">' + esc($('city').value) + '</div>');
+    h.push('<div class="c">USt-IdNr. DE000000000 (fiktiv)</div>');
+    h.push('<div class="rule"></div>');
+    r.positions.forEach(function (p) {
+      var g = DAKZ.positionGross(p);
+      h.push('<div class="ln"><span>' + esc(p.text) + '</span><span>' + eur(g) + ' ' + (p.vat === 19 ? 'A' : p.vat === 7 ? 'B' : p.vat + '%') + '</span></div>');
+      if (p.qty !== 1 || (p.unit && p.unit !== 'Stück')) h.push('<div class="sub">' + String(p.qty).replace('.', ',') + ' ' + esc(p.unit) + ' × ' + p.unitPrice.toFixed(2).replace('.', ',') + '</div>');
+      if (p.refundable === false) h.push('<div class="sub">nicht erstattungsfähig</div>');
+    });
+    h.push('<div class="rule"></div>');
+    h.push('<div class="ln b big"><span>SUMME EUR</span><span>' + eur(t.gross) + '</span></div>');
+    h.push('<div class="ln"><span>Karte: VISA</span><span>' + eur(t.gross) + '</span></div>');
+    h.push('<div class="stars">********************************************</div>');
+    t.vatLines.forEach(function (l) {
+      h.push('<div class="ln"><span>MwSt ' + l.rate + ' %  Netto ' + eur(l.net) + '</span><span>' + eur(l.vat) + '</span></div>');
+    });
+    h.push('<div class="ln"><span>Nettoumsatz</span><span>' + eur(t.net) + '</span></div>');
+    h.push('<div class="stars">********************************************</div>');
+    h.push('<div class="ln"><span>Bon ' + esc(r.bonNr) + '</span><span>Kasse 1</span></div>');
+    h.push('<div>' + fmtDate(r.start) + '</div>');
+    h.push('<div class="rule"></div>');
+    h.push('<div>TSE Start: ' + fmtDate(r.start, true) + '</div>');
+    h.push('<div>TSE Ende:  ' + fmtDate(r.end, true) + '</div>');
+    h.push('<div>TSE-Signatur:</div><div class="sig">' + esc(r.tseSignature) + '</div>');
+    h.push('<div class="rule"></div>');
+    h.push('<div class="c b">Digitaler Ausfuhrkassenzettel</div>');
+    h.push('<div class="c" style="font-size:11px">Einkaufsdaten für dAKZ – mit der eZOLL-App scannen</div>');
+    res.codes.forEach(function (c) {
+      h.push('<div class="qr-block">' + (c.qr ? c.qr.svg : '<div class="qr-err">' + esc(c.qrError) + '</div>') +
+        '<div class="qr-cap">QR ' + c.index + '/' + c.count + (c.qr ? ' · V' + c.qr.version + ' · ' + c.bytes + ' Byte' : '') + '</div></div>');
+    });
+    h.push('<div class="rule"></div><div class="c" style="font-size:11px">Simulation · kein steuerlich gültiger Beleg</div>');
+    $('receipt').innerHTML = h.join('');
+  }
+
+  function renderInspector(res) {
+    var errs = 0, warns = 0;
+    res.codes.forEach(function (c) { errs += c.check.errors.length + (c.qr ? 0 : 1); warns += c.check.warnings.length; });
+    var pill = errs ? '<span class="pill err">' + errs + ' Fehler</span>' : warns ? '<span class="pill warn">' + warns + ' Warnung' + (warns > 1 ? 'en' : '') + '</span>' : '<span class="pill ok">Spezifikationskonform</span>';
+    $('status').innerHTML = pill + '<span class="meta">' + res.codes.length + ' QR-Code' + (res.codes.length > 1 ? 's' : '') + ' · ECC ' + $('ecc').value + ' · ' + res.codes.reduce(function (a, c) { return a + c.bytes; }, 0) + ' Byte gesamt</span>';
+
+    $('codeTabs').innerHTML = res.codes.map(function (c, i) {
+      return '<button role="tab" aria-selected="' + (i === state.activeCode) + '" data-c="' + i + '">QR ' + c.index + '/' + c.count + '</button>';
+    }).join('');
+
+    var c = res.codes[state.activeCode];
+    var limit = parseInt($('limit').value, 10) || 1663;
+    var pct = Math.min(100, c.bytes / limit * 100);
+    $('meter').innerHTML = '<div class="lbl"><span>' + c.bytes + ' / ' + limit + ' Byte · ' + c.chars + ' Zeichen</span><span>' + (c.qr ? 'Version ' + c.qr.version : 'nicht kodierbar') + '</span></div>' +
+      '<div class="bar"><i class="' + (c.bytes > limit || !c.qr ? 'over' : '') + '" style="width:' + pct.toFixed(1) + '%"></i></div>';
+
+    $('csv').innerHTML = c.text.split('\n').map(function (line, i, arr) {
+      if (line === '' && i === arr.length - 1) return '';
+      var cr = /\r$/.test(line); line = line.replace(/\r$/, '');
+      var t = line.charAt(0);
+      var body = esc(line.slice(1)).replace(/;/g, '<span class="sep">;</span>');
+      var hasLf = i < arr.length - 1;
+      return '<span class="' + t + '"><span class="t">' + esc(t) + '</span>' + body + '</span>' + (cr ? '<span class="lf">␍</span>' : '') + (hasLf ? '<span class="lf">␊</span>' : '');
+    }).join('\n');
+
+    var items = [];
+    res.codes.forEach(function (x) {
+      var tag = res.codes.length > 1 ? 'QR ' + x.index + ': ' : '';
+      if (!x.qr) items.push('<li class="err">' + tag + esc(x.qrError) + '</li>');
+      x.check.errors.forEach(function (m) { items.push('<li class="err">' + tag + esc(m) + '</li>'); });
+      x.check.warnings.forEach(function (m) { items.push('<li class="warn">' + tag + esc(m) + '</li>'); });
+    });
+    if (!items.length) items.push('<li class="ok">Alle Felder passen zu den regulären Ausdrücken der Spezifikation, Summen sind stimmig.</li>');
+    $('findings').innerHTML = items.join('');
+
+    var k = res.codes[0].check.records[0] || [];
+    var names = [['K2', 'Nummer'], ['K3', 'Gesamtanzahl'], ['K4', 'BON_NR'], ['K5', 'BON_START'], ['K6', 'BON_ENDE'], ['K7', 'UMS_BRUTTO']];
+    $('fields').innerHTML = names.map(function (n, i) {
+      var v = k[i + 1] || '';
+      var extra = (i === 3 || i === 4) && /^\d{10}$/.test(v) ? ' <span class="nm">= ' + fmtDate(+v, true) + ' UTC</span>' : (i === 1 && !v ? ' <span class="nm">leer → 1</span>' : '');
+      return '<dt>' + n[0] + '</dt><dd class="nm">' + n[1] + '</dd><dd>' + esc(v) + extra + '</dd>';
+    }).join('');
+  }
+
+  $('codeTabs').addEventListener('click', function (e) { var b = e.target.closest('[data-c]'); if (!b) return; state.activeCode = +b.dataset.c; renderInspector(state.result); });
+  $('copy').onclick = function () {
+    var text = state.result.codes[state.activeCode].text, btn = this;
+    var done = function () { btn.textContent = 'Kopiert'; setTimeout(function () { btn.textContent = 'CSV kopieren'; }, 1400); };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () { selectCsv(); });
+    else selectCsv();
+  };
+  function selectCsv() { var s = window.getSelection(), rg = document.createRange(); rg.selectNodeContents($('csv')); s.removeAllRanges(); s.addRange(rg); }
+
+  // ---------- Scanmodus ----------
+  function renderScan() {
+    var codes = state.result.codes; state.scanIndex = Math.min(state.scanIndex, codes.length - 1);
+    var c = codes[state.scanIndex];
+    $('scanTitle').textContent = 'Bon ' + state.receipt.bonNr + ' · QR ' + c.index + ' von ' + c.count;
+    $('scanQr').innerHTML = c.qr ? c.qr.svg : '<div class="qr-err">' + esc(c.qrError) + '</div>';
+    $('scanPrev').disabled = state.scanIndex === 0; $('scanNext').disabled = state.scanIndex === codes.length - 1;
+  }
+  $('scanMode').onclick = function () { state.scanIndex = 0; $('scan').hidden = false; renderScan(); };
+  $('scanClose').onclick = function () { $('scan').hidden = true; };
+  $('scanPrev').onclick = function () { state.scanIndex--; renderScan(); };
+  $('scanNext').onclick = function () { state.scanIndex++; renderScan(); };
+  document.addEventListener('keydown', function (e) {
+    if ($('scan').hidden) return;
+    if (e.key === 'Escape') $('scan').hidden = true;
+    if (e.key === 'ArrowRight' && state.scanIndex < state.result.codes.length - 1) { state.scanIndex++; renderScan(); }
+    if (e.key === 'ArrowLeft' && state.scanIndex > 0) { state.scanIndex--; renderScan(); }
+  });
+
+  // ---------- Tabs ----------
+  document.querySelector('nav.tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-view]'); if (!b) return;
+    document.querySelectorAll('nav.tabs button').forEach(function (x) { x.setAttribute('aria-selected', x === b); });
+    $('view-sim').hidden = b.dataset.view !== 'sim';
+    $('view-plan').hidden = b.dataset.view !== 'plan';
+  });
+  if (location.hash === '#plan') document.getElementById('tab-plan').click();
+
+  scenario('random');
+})();
+</script>
