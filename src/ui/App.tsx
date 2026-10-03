@@ -2,7 +2,10 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { About } from './About';
 import { Checker } from './Checker';
 import { Generator } from './Generator';
-import { initialState, reducer } from './state';
+import { initialState, persistable, reducer } from './state';
+import { KEYS, saveJson } from './storage';
+import { takeBonNr, useBonCounter } from './useBonCounter';
+import { useSavedBons } from './useSavedBons';
 
 type View = 'generator' | 'checker' | 'about';
 const VIEWS: { id: View; label: string }[] = [
@@ -14,7 +17,9 @@ const VIEWS: { id: View; label: string }[] = [
 const viewFromHash = (): View => (window.location.hash === '#pruefen' ? 'checker' : window.location.hash === '#info' ? 'about' : 'generator');
 
 export function App() {
-  const [state, dispatch] = useReducer(reducer, undefined, initialState);
+  const [state, dispatch] = useReducer(reducer, undefined, () => initialState(takeBonNr));
+  const counter = useBonCounter();
+  const saved = useSavedBons();
   const [view, setView] = useState<View>(viewFromHash);
   const [toast, setToast] = useState<string | null>(null);
   const timer = useRef<number>(undefined);
@@ -24,6 +29,11 @@ export function App() {
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setToast(null), 2200);
   }, []);
+
+  // Aktuellen Bon merken, damit er nach dem Neuladen erhalten bleibt.
+  useEffect(() => {
+    saveJson(KEYS.current, persistable(state));
+  }, [state]);
 
   useEffect(() => {
     const onHash = () => setView(viewFromHash());
@@ -52,7 +62,7 @@ export function App() {
           ))}
         </nav>
       </header>
-      {view === 'generator' && <Generator state={state} dispatch={dispatch} notify={notify} />}
+      {view === 'generator' && <Generator state={state} dispatch={dispatch} counter={counter} saved={saved} notify={notify} />}
       {view === 'checker' && <Checker notify={notify} />}
       {view === 'about' && <About />}
       {toast && (

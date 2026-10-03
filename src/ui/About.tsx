@@ -59,7 +59,12 @@ export function About() {
       <section className="panel">
         <h2>Hinweise zum Testen</h2>
         <ul>
-          <li>Scanmodus: Code bildschirmfüllend, Pfeiltasten wechseln Teilcodes, Leertaste erzeugt den nächsten Bon.</li>
+          <li>Scanmodus: Code bildschirmfüllend, Pfeiltasten wechseln Teilcodes, Leertaste erzeugt den nächsten Bon, N den gleichen Einkauf mit neuer Bon-Nr.</li>
+          <li>
+            Das dAKZ-Backend erkennt Duplikate über BON_NR, Unternehmen und Zeitstempel. Jeder neue Bon bekommt deshalb die nächste freie Nummer vom Zähler. Der
+            Zähler liegt im Browser; testen mehrere Personen, sollte jede einen eigenen Startbereich wählen.
+          </li>
+          <li>Eigene Bons speichern Positionen, Händler, Optionen und eingebaute Fehler. Beim Laden gibt es eine neue Bon-Nr. und die aktuelle Uhrzeit.</li>
           <li>Druck: Papierbreite 58 oder 80 mm wählen, im Druckdialog Ränder auf „keine“ stellen. Der Prüfer zeigt die zu erwartende Modulgröße.</li>
           <li>„Link teilen“ legt den kompletten Bon in die Adresse, damit ein Testfall reproduzierbar bleibt.</li>
           <li>Alle Belege tragen den Aufdruck „TESTBELEG“ und fiktive Händlerdaten. Sie sind keine steuerlich gültigen Belege.</li>

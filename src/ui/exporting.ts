@@ -1,6 +1,7 @@
 import JSZip from 'jszip';
-import { SCENARIOS, formatEpoch, money, newSeed, signTse } from '../dakz';
+import { formatEpoch, money, newSeed, signTse, type SavedBon } from '../dakz';
 import { matrixToRgba, type QrMatrix } from '../qr/encode';
+import { buildBon, sourceLabel } from './sources';
 import type { AppState } from './state';
 import { renderBon } from './useCodes';
 
@@ -39,21 +40,23 @@ const csvCell = (v: string | number) => (/[;"\n]/.test(String(v)) ? `"${String(v
  * Serienerzeugung: n Bons eines Szenarios mit neuen Seeds als ZIP.
  * Je Bon: QR-PNG(s), Rohinhalt(e) als .txt und eine Übersicht als CSV.
  */
-export async function seriesZip(state: AppState, n: number, onProgress?: (i: number) => void): Promise<Blob> {
+export async function seriesZip(state: AppState, n: number, bons: SavedBon[], takeBonNr: () => string, onProgress?: (i: number) => void): Promise<Blob> {
   const zip = new JSZip();
-  const scenario = SCENARIOS.find((s) => s.id === state.scenarioId) ?? SCENARIOS[0];
+  const label = sourceLabel(state.scenarioId, bons);
   const rows: (string | number)[][] = [['bon_nr', 'start_utc', 'ende_utc', 'brutto', 'netto', 'mwst', 'positionen', 'qr_codes', 'fehler', 'warnungen', 'seed']];
   for (let i = 0; i < n; i++) {
     const seed = newSeed();
-    const receipt = scenario.build(seed);
+    const { receipt, template } = buildBon(state.scenarioId, bons, takeBonNr(), seed);
+    const options = template ? template.options : state.options;
+    const eccOverride = template ? template.eccOverride : state.eccOverride;
     if (state.tseMode === 'ecdsa') Object.assign(receipt, await signTse(receipt).then((t) => ({ tseSignature: t.signature, tsePublicKey: t.publicKey })));
-    const bon = renderBon({ receipt, options: state.options, eccOverride: state.eccOverride });
+    const bon = renderBon({ receipt, options, eccOverride });
     const dir = zip.folder(`bon-${receipt.bonNr}`)!;
     for (const c of bon.codes) {
       dir.file(`qr-${c.index}-von-${c.count}.txt`, c.text);
       if (c.matrix) dir.file(`qr-${c.index}-von-${c.count}.png`, await qrPng(c.matrix, `Bon ${receipt.bonNr} · QR ${c.index}/${c.count}`));
     }
-    dir.file('bon.json', JSON.stringify({ seed, scenario: scenario.id, receipt }, null, 2));
+    dir.file('bon.json', JSON.stringify({ seed, source: label, receipt }, null, 2));
     rows.push([
       receipt.bonNr,
       formatEpoch(receipt.start, true),
@@ -72,7 +75,7 @@ export async function seriesZip(state: AppState, n: number, onProgress?: (i: num
   zip.file('uebersicht.csv', '﻿' + rows.map((r) => r.map(csvCell).join(';')).join('\r\n'));
   zip.file(
     'LIESMICH.txt',
-    `dAKZ Bonsimulator – Serienexport\nSzenario: ${scenario.label}\nAnzahl: ${n}\nFehlerkorrektur: ${state.eccOverride ?? 'Q'}\n\nAlle Daten sind Testdaten. Die .txt-Dateien enthalten den exakten QR-Inhalt (UTF-8).\n`
+    `dAKZ Bonsimulator – Serienexport\nQuelle: ${label}\nAnzahl: ${n}\nBon-Nummern: fortlaufend vom Zähler, jede nur einmal\n\nAlle Daten sind Testdaten. Die .txt-Dateien enthalten den exakten QR-Inhalt (UTF-8).\n`
   );
   return zip.generateAsync({ type: 'blob' });
 }

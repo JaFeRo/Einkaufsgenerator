@@ -1,6 +1,11 @@
 import { useEffect, useState, type Dispatch } from 'react';
-import { QR_CAPACITY_Q_BYTES, RX, SCENARIOS, euro, newSeed, parseDecimal, positionGross, randomPosition, type Faults, type Position } from '../dakz';
+import { QR_CAPACITY_Q_BYTES, SCENARIOS, euro, newSeed, parseDecimal, positionGross, randomPosition, type Faults, type Position } from '../dakz';
+import { BonNumberField } from './BonNumberField';
+import { SavedBons } from './SavedBons';
 import type { Action, AppState } from './state';
+import type { BonActions } from './useBonActions';
+import type { BonCounter } from './useBonCounter';
+import type { SavedBonsApi } from './useSavedBons';
 
 const RATES = [0, 7, 19, 5, 8, 13, 21];
 
@@ -41,11 +46,19 @@ const FAULTS: { key: keyof Faults; label: string; title: string }[] = [
   { key: 'rateWithSpace', label: 'Satz „19 “', title: 'Steuersatz mit Leerzeichen wie im PDF-Regex' }
 ];
 
-export function Editor({ state, dispatch }: { state: AppState; dispatch: Dispatch<Action> }) {
+interface EditorProps {
+  state: AppState;
+  dispatch: Dispatch<Action>;
+  counter: BonCounter;
+  actions: BonActions;
+  saved: SavedBonsApi;
+  notify: (m: string) => void;
+}
+
+export function Editor({ state, dispatch, counter, actions, saved, notify }: EditorProps) {
   const { receipt, merchant, options } = state;
   const setPositions = (positions: Position[]) => dispatch({ type: 'receipt', patch: { positions } });
   const updatePos = (i: number, patch: Partial<Position>) => setPositions(receipt.positions.map((p, j) => (j === i ? { ...p, ...patch } : p)));
-  const bonInvalid = !RX.bonNr.test(receipt.bonNr);
   const gross = receipt.positions.reduce((a, p) => a + positionGross(p), 0);
 
   return (
@@ -63,7 +76,7 @@ export function Editor({ state, dispatch }: { state: AppState; dispatch: Dispatc
               className="chip"
               title={s.description}
               aria-pressed={state.scenarioId === s.id}
-              onClick={() => dispatch({ type: 'scenario', id: s.id })}
+              onClick={() => actions.newBon(s.id)}
             >
               {s.label}
             </button>
@@ -71,9 +84,12 @@ export function Editor({ state, dispatch }: { state: AppState; dispatch: Dispatc
         </div>
       </div>
 
+      <SavedBons state={state} saved={saved} actions={actions} notify={notify} setSource={(scenarioId) => dispatch({ type: 'source', scenarioId })} />
+
       <div className="section">
         <h3>Kopfdaten</h3>
         <div className="grid2">
+          <BonNumberField state={state} dispatch={dispatch} counter={counter} actions={actions} />
           <label className="field">
             Händler (nur Bon)
             <input id="merchant-name" value={merchant.name} onChange={(e) => dispatch({ type: 'merchant', patch: { name: e.target.value } })} />
@@ -81,16 +97,6 @@ export function Editor({ state, dispatch }: { state: AppState; dispatch: Dispatc
           <label className="field">
             Anschrift (nur Bon)
             <input id="merchant-address" value={merchant.address} onChange={(e) => dispatch({ type: 'merchant', patch: { address: e.target.value } })} />
-          </label>
-          <label className="field">
-            BON_NR (K4)
-            <input
-              id="bon-nr"
-              className={`num ${bonInvalid ? 'invalid' : ''}`}
-              inputMode="numeric"
-              value={receipt.bonNr}
-              onChange={(e) => dispatch({ type: 'receipt', patch: { bonNr: e.target.value.trim() } })}
-            />
           </label>
           <label className="field">
             Externe Referenz (E6)

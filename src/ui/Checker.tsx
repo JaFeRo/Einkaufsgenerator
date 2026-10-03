@@ -268,20 +268,26 @@ export function Checker({ notify }: { notify: (m: string) => void }) {
           </section>
         )}
         {groups.map((g) => (
-          <BonCard key={g.key} group={g} />
+          <BonCard key={g.key} group={g} sameBonNr={groups.filter((o) => o !== g && o.key.split('|')[0] === g.key.split('|')[0] && !o.key.startsWith('ungueltig')).length} />
         ))}
       </div>
     </main>
   );
 }
 
-function BonCard({ group }: { group: BonGroup }) {
+function BonCard({ group, sameBonNr }: { group: BonGroup; sameBonNr: number }) {
   const entries = [...group.entries].sort((a, b) => +(a.check.records[0]?.[1] ?? 0) - +(b.check.records[0]?.[1] ?? 0));
   const [open, setOpen] = useState<number | null>(null);
   const set = validateSet(entries.map((e) => e.scanned.text));
   const k = entries[0].check.records[0]?.[0] === 'K' ? entries[0].check.records[0] : undefined;
 
   const findings: (Finding & { prefix?: string })[] = [...set.findings];
+  if (sameBonNr > 0)
+    findings.push({
+      severity: 'error',
+      ref: 'K4',
+      message: `BON_NR ${k?.[3]} kommt bei ${sameBonNr} weiteren gescannten Bon${sameBonNr > 1 ? 's' : ''} mit anderem Zeitpunkt oder Betrag vor – die Duplikatsprüfung würde sie zusammenwerfen`
+    });
   for (const e of entries) {
     const nr = e.check.records[0]?.[1];
     const prefix = set.expected > 1 && nr ? `QR ${nr}` : undefined;

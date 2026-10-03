@@ -3,7 +3,10 @@ import { formatEpoch, SPEC } from '../dakz';
 import { download, qrPng, seriesZip } from './exporting';
 import { CsvView, Findings, StatusPill } from './Findings';
 import { shareHash, type Action, type AppState } from './state';
+import type { BonActions } from './useBonActions';
+import type { BonCounter } from './useBonCounter';
 import type { RenderedBon } from './useCodes';
+import type { SavedBonsApi } from './useSavedBons';
 
 /** Bedruckbare Breite in mm bei 3 mm Rand je Seite. */
 const printableMm = (paper: number) => paper - 6;
@@ -15,9 +18,12 @@ interface Props {
   dispatch: Dispatch<Action>;
   bon: RenderedBon;
   notify: (msg: string) => void;
+  counter: BonCounter;
+  actions: BonActions;
+  saved: SavedBonsApi;
 }
 
-export function Inspector({ state, dispatch, bon, notify }: Props) {
+export function Inspector({ state, dispatch, bon, notify, counter, actions, saved }: Props) {
   const [active, setActive] = useState(0);
   const [seriesN, setSeriesN] = useState(20);
   const [busy, setBusy] = useState<string | null>(null);
@@ -56,6 +62,7 @@ export function Inspector({ state, dispatch, bon, notify }: Props) {
   };
 
   const pngAll = async () => {
+    actions.claim();
     for (const c of bon.codes) {
       if (!c.matrix) continue;
       download(await qrPng(c.matrix, `Bon ${state.receipt.bonNr} · QR ${c.index}/${c.count}`), `bon-${state.receipt.bonNr}-qr-${c.index}-von-${c.count}.png`);
@@ -63,13 +70,14 @@ export function Inspector({ state, dispatch, bon, notify }: Props) {
   };
 
   const txtAll = () => {
+    actions.claim();
     bon.codes.forEach((c) => download(new Blob([c.text], { type: 'text/plain;charset=utf-8' }), `bon-${state.receipt.bonNr}-qr-${c.index}-von-${c.count}.txt`));
   };
 
   const series = async () => {
     setBusy('0');
     try {
-      const blob = await seriesZip(state, seriesN, (i) => setBusy(String(i)));
+      const blob = await seriesZip(state, seriesN, saved.bons, counter.take, (i) => setBusy(String(i)));
       download(blob, `dakz-serie-${state.scenarioId}-${seriesN}.zip`);
       notify(`${seriesN} Bons exportiert`);
     } finally {
@@ -151,7 +159,13 @@ export function Inspector({ state, dispatch, bon, notify }: Props) {
               </button>
             ))}
           </div>
-          <button className="btn" onClick={() => window.print()}>
+          <button
+            className="btn"
+            onClick={() => {
+              actions.claim();
+              window.print();
+            }}
+          >
             Drucken
           </button>
         </div>
@@ -183,7 +197,7 @@ export function Inspector({ state, dispatch, bon, notify }: Props) {
             {busy !== null ? `Erzeuge ${busy}/${seriesN} …` : 'Serie als ZIP'}
           </button>
         </div>
-        <p className="hint">Die Serie nutzt das gewählte Szenario mit neuen Zufallswerten: je Bon QR-PNGs, exakter Inhalt als TXT und eine Übersicht als CSV.</p>
+        <p className="hint">Die Serie nutzt das gewählte Szenario oder den gewählten eigenen Bon und vergibt fortlaufende Bon-Nummern vom Zähler: je Bon QR-PNGs, exakter Inhalt als TXT und eine Übersicht als CSV.</p>
       </div>
     </section>
   );

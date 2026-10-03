@@ -3,3 +3,5 @@ export * from './format';
 export * from './generate';
 export * from './validate';
 export * from './scenarios';
+export * from './bonNumber';
+export * from './templates';
