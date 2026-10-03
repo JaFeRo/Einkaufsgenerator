@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
 // Relative base, damit der Build auch unter https://<user>.github.io/<repo>/ läuft.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import examples from './fixtures/zoll-beispiele.json';
+import examples from '../src/dakz/zoll-beispiele.json';
 import { RX, parseRecord, validateCode, validateSet } from '../src/dakz';
 
 const refs = (text: string, severity: 'error' | 'warning') =>

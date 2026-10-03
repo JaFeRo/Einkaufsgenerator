@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import examples from './fixtures/zoll-beispiele.json';
+import examples from '../src/dakz/zoll-beispiele.json';
 import { DEFAULT_OPTIONS, SCENARIOS, computeTotals, generate, money, positionGross, utf8Length, validateCode, validateSet } from '../src/dakz';
 
 const scenario = (id: string, seed = 1) => SCENARIOS.find((s) => s.id === id)!.build(seed);

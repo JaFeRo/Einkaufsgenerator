@@ -5,7 +5,7 @@ Ein Simulator, der realistische Kassenbons mit QR-Codes für den **digitalen Aus
 Grundlage: **„Schnittstellendefinition QR-Code – Technische Beschreibung des Datenformats“**, Generalzolldirektion, Version 1.2 vom 01.09.2026.
 Quelle: [zoll.de – Anbindung an dAKZ über die eZOLL-App](https://www.zoll.de/DE/Fachthemen/Steuern/Umsatzsteuererstattung/anbindung_dakz_ezoll.html) → „Anforderungen an den QR-Code“ (PDF).
 
-Ein lauffähiger Prototyp liegt in [`prototype/`](../prototype/) (`index.html` + `dakz-core.js`, ohne Build-Schritt im Browser zu öffnen).
+Die App liegt unter `src/` (siehe README). Der anfängliche HTML-Prototyp ist darin aufgegangen.
 
 ---
 
@@ -33,7 +33,7 @@ Die Beispiel-QR-Codes aus dem PDF wurden dekodiert und mit dem Text verglichen:
 2. **ECC-Level der Beispiele.** 6.1 und 6.2 sind mit ECC **L** kodiert, der Primärcode in 6.3 mit ECC **M** und 2.325 Byte – nicht mit Q.
 3. **Abschließendes LF.** Laut EBNF endet jeder record mit LF. 6.1 und 6.3 haben am Ende keins, 6.2 schon.
 4. **Summen in den Beispielen.** 6.2: E2/E3 = 44,72/10,49, Summe der M-Zeilen ergibt 45,70/9,51. 6.3: K7 = 60,88, Summe M3 = 60,85. Konsistenzregeln sind nicht spezifiziert.
-5. **Regex-Details.** P2/M2 enthalten im PDF ein Leerzeichen (`^\d{1,2} (,\d{1,2})?$`), das kein Beispiel erfüllt. K4 nennt „bis zu 13 Ziffern“, die Regex erlaubt höchstens 10¹². Das Feldbeispiel zeigt „19,00“, alle Beispieldatensätze „19“.
+5. **Regex-Details.** P2/M2 enthalten im PDF ein Leerzeichen (`^\d{1,2} (,\d{1,2})?$`), das kein Beispiel erfüllt. K4 nennt „bis zu 13 Ziffern“, die Regex erlaubt höchstens 10¹². Das Feldbeispiel zeigt „19,00“, alle Beispieldatensätze „19“. Die P4-Regex lässt 50.000,01–50.000,99 zu, der Text nennt ±50.000.
 
 Der Simulator macht diese Punkte einstellbar (Profil, ECC, Grenze, Steuersatz-Format, LF) und meldet Summenabweichungen als Warnung statt als Fehler.
 
@@ -87,9 +87,23 @@ tests/
 | 4 – Rückprüfung | Code per Kamera oder Bild-Upload einlesen und gegen die Spezifikation prüfen (für fremde Kassensysteme) |
 | 5 – Feinschliff | Echte ECDSA-Signaturen über WebCrypto, Verlauf, Deployment per GitHub Actions |
 
-## 5. Offene Fragen
+## 5. Entscheidungen
 
-1. Standardprofil: streng nach Text (ECC Q, 1.663 Byte) oder wie die Zoll-Beispiele (ECC M, bis 2.331 Byte)?
-2. Wird auf Thermodruckern gedruckt, oder reicht Scannen vom Bildschirm?
-3. React oder schlank ohne Framework? GitHub Pages als Hosting in Ordnung?
-4. Wird die Rückprüfung fremder Codes (Phase 4) gebraucht?
+| Frage | Entscheidung |
+|---|---|
+| Profil | Fehlerkorrektur **Q**, Byte-Modus, max. 1.663 Byte je Code (Grenze kleiner einstellbar). ECC M nur als Fehlerinjektion. |
+| Ausgabe | Vorrangig Bildschirm (Scanmodus), Druck für 58/80 mm möglich. |
+| Framework | React + Vite + TypeScript, GitHub Pages. |
+| Rückprüfung | Ja: Kamera, Bild, Text. |
+
+## 6. Stand
+
+| Phase | Stand |
+|---|---|
+| 1 – Kern & Tests | erledigt: `src/dakz`, 38 Tests (Golden 6.1, Regex-Grenzwerte, Fehlerinjektion, QR-Rundlauf mit zxing-wasm) |
+| 2 – Werkbank-UI | erledigt: Editor, Bon, Prüfer, Scanmodus, Teilen per Link |
+| 3 – Ausgabe | erledigt: Druck 58/80 mm mit Modulgrößen-Hinweis, PNG, TXT, Serie als ZIP |
+| 4 – Rückprüfung | erledigt: Kamera, Upload/Einfügen, Text; Zusammenführung mehrteiliger Bons |
+| 5 – Feinschliff | ECDSA-Signatur und Pages-Workflow erledigt; offen: Verlauf, Playwright-Tests im CI |
+
+Manuell geprüft (Chromium, Playwright): Überlauf-Bon mit 3 Codes im Scanmodus fotografiert und in der Rückprüfung hochgeladen → „Vollständig & konform“; Druck-PDF (80 mm) mit 300 dpi gerastert → alle Codes lesbar; Serien-ZIP; Link-Rundlauf; 390 px ohne horizontalen Überlauf.
