@@ -1,8 +1,34 @@
+import { useState } from 'react';
 import { QR_CAPACITY_Q_BYTES } from '../dakz';
+import { Questions } from './Questions';
 
-export function About() {
+type Tab = 'basics' | 'questions';
+
+export function About({ notify }: { notify: (m: string) => void }) {
+  const [tab, setTab] = useState<Tab>(() => (window.location.hash === '#fragen' ? 'questions' : 'basics'));
+  const select = (t: Tab) => {
+    setTab(t);
+    window.history.replaceState(null, '', window.location.pathname + window.location.search + (t === 'questions' ? '#fragen' : '#info'));
+  };
+
   return (
     <main className="about">
+      <div className="tabs sub-tabs" role="tablist" aria-label="Spezifikation">
+        <button role="tab" aria-selected={tab === 'basics'} onClick={() => select('basics')}>
+          Grundlagen
+        </button>
+        <button role="tab" aria-selected={tab === 'questions'} onClick={() => select('questions')}>
+          Rückfragen an den Autor
+        </button>
+      </div>
+      {tab === 'questions' ? <Questions notify={notify} /> : <Basics />}
+    </main>
+  );
+}
+
+function Basics() {
+  return (
+    <>
       <section className="panel">
         <h2>Worauf der Simulator beruht</h2>
         <p>
@@ -70,6 +96,6 @@ export function About() {
           <li>Alle Belege tragen den Aufdruck „TESTBELEG“ und fiktive Händlerdaten. Sie sind keine steuerlich gültigen Belege.</li>
         </ul>
       </section>
-    </main>
+    </>
   );
 }

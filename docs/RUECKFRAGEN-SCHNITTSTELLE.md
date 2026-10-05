@@ -2,7 +2,7 @@
 
 Guten Tag,
 
-ich habe auf Basis der Schnittstellendefinition einen Simulator gebaut, der Testbons mit QR-Codes erzeugt und eingescannte Codes gegen die Spezifikation prüft. Dabei habe ich die Beispiel-QR-Codes aus Kapitel 6 aus dem PDF dekodiert und mit dem Text verglichen. Dabei sind mir Unklarheiten und Widersprüche aufgefallen, die Kassenhersteller beim Umsetzen vermutlich ebenfalls treffen. Ich habe sie unten gesammelt, zuerst als Fragen, dann als Auffälligkeiten im Dokument und zum Schluss als Vorschläge, was ich ändern oder ergänzen würde.
+ich habe auf Basis der Schnittstellendefinition einen Simulator gebaut, der Testbons mit QR-Codes erzeugt und eingescannte Codes gegen die Spezifikation prüft. Ich habe die Beispiel-QR-Codes aus Kapitel 6 aus dem PDF dekodiert und mit dem Text verglichen. Mir sind Unklarheiten und Widersprüche aufgefallen, die Kassenhersteller beim Umsetzen vermutlich ebenfalls treffen. Ich habe sie unten gesammelt, zuerst als Fragen, dann als Auffälligkeiten im Dokument und zum Schluss als Vorschläge, was ich ändern oder ergänzen würde.
 
 Für die Beispielcodes gilt: 6.1 und 6.2 sind mit Fehlerkorrektur L kodiert, 6.3 (beide Codes) mit M. Keiner enthält ein ECI-Segment (Symbologiekennung `]Q1`).
 

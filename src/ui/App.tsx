@@ -14,7 +14,7 @@ const VIEWS: { id: View; label: string }[] = [
   { id: 'about', label: 'Spezifikation' }
 ];
 
-const viewFromHash = (): View => (window.location.hash === '#pruefen' ? 'checker' : window.location.hash === '#info' ? 'about' : 'generator');
+const viewFromHash = (): View => (window.location.hash === '#pruefen' ? 'checker' : window.location.hash === '#info' || window.location.hash === '#fragen' ? 'about' : 'generator');
 
 export function App() {
   const [state, dispatch] = useReducer(reducer, undefined, () => initialState(takeBonNr));
@@ -64,7 +64,7 @@ export function App() {
       </header>
       {view === 'generator' && <Generator state={state} dispatch={dispatch} counter={counter} saved={saved} notify={notify} />}
       {view === 'checker' && <Checker notify={notify} />}
-      {view === 'about' && <About />}
+      {view === 'about' && <About notify={notify} />}
       {toast && (
         <div className="toast" role="status">
           {toast}
