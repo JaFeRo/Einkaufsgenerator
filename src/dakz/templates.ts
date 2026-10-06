@@ -40,7 +40,7 @@ const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object
 const num = (v: unknown, d: number) => (typeof v === 'number' && Number.isFinite(v) ? v : d);
 const str = (v: unknown, d = '') => (typeof v === 'string' ? v : d);
 
-function sanitizePosition(v: unknown): Position | null {
+export function sanitizePosition(v: unknown): Position | null {
   if (!isObj(v) || typeof v.text !== 'string') return null;
   return {
     text: v.text,
@@ -82,4 +82,23 @@ export function parseSavedBons(raw: unknown, defaults: { merchant: Merchant; opt
     });
   }
   return out;
+}
+
+/** Prüft einen gespeicherten oder geteilten Bon streng. Liefert null, wenn er nicht brauchbar ist. */
+export function sanitizeReceipt(v: unknown): Receipt | null {
+  if (!isObj(v) || typeof v.bonNr !== 'string' || !Array.isArray(v.positions)) return null;
+  const positions = v.positions.map(sanitizePosition);
+  if (!positions.length || positions.some((p) => p === null)) return null;
+  const start = num(v.start, NaN);
+  const end = num(v.end, NaN);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+  return {
+    bonNr: v.bonNr,
+    start,
+    end,
+    tseSignature: str(v.tseSignature),
+    tsePublicKey: str(v.tsePublicKey),
+    externalRef: str(v.externalRef),
+    positions: positions as Position[]
+  };
 }

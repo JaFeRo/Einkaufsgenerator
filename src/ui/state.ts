@@ -1,4 +1,4 @@
-import { DEFAULT_OPTIONS, MERCHANT, deriveExternalRef, newSeed } from '../dakz';
+import { DEFAULT_OPTIONS, MERCHANT, deriveExternalRef, newSeed, sanitizeReceipt } from '../dakz';
 import type { Faults, GenerateOptions, Merchant, Receipt } from '../dakz';
 import { buildBon } from './sources';
 import { KEYS, loadJson } from './storage';
@@ -105,16 +105,17 @@ export function persistable(state: AppState) {
 function sanitize(d: unknown): AppState | null {
   if (typeof d !== 'object' || d === null) return null;
   const x = d as Record<string, any>;
-  if (x.v !== 1 || !Array.isArray(x.receipt?.positions) || typeof x.receipt?.bonNr !== 'string') return null;
+  const receipt = sanitizeReceipt(x.receipt);
+  if (x.v !== 1 || !receipt) return null;
   return {
     scenarioId: String(x.scenarioId ?? 'random'),
-    receipt: x.receipt,
+    receipt,
     merchant: { ...MERCHANT, ...x.merchant },
     options: { ...DEFAULT_OPTIONS, ...x.options, faults: { ...x.options?.faults } },
     eccOverride: x.eccOverride === 'M' ? 'M' : null,
     tseMode: x.tseMode === 'ecdsa' ? 'ecdsa' : 'random',
     paper: x.paper === 58 ? 58 : 80,
-    assignedBonNr: typeof x.assignedBonNr === 'string' ? x.assignedBonNr : x.receipt.bonNr
+    assignedBonNr: typeof x.assignedBonNr === 'string' ? x.assignedBonNr : receipt.bonNr
   };
 }
 

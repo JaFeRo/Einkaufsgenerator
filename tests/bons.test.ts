@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_OPTIONS, MERCHANT, MAX_BON_NR, allocateBonNr, deriveExternalRef, instantiate, isValidBonNr, markIssued, parseSavedBons, type SavedBon } from '../src/dakz';
+import { DEFAULT_OPTIONS, MERCHANT, MAX_BON_NR, allocateBonNr, deriveExternalRef, instantiate, isValidBonNr, markIssued, parseSavedBons, sanitizeReceipt, type SavedBon } from '../src/dakz';
 
 describe('BON_NR-Zähler', () => {
   it('zählt fortlaufend hoch', () => {
@@ -69,5 +69,16 @@ describe('Gespeicherte Bons', () => {
     expect(parsed.map((b) => b.name)).toEqual(['Testfall', 'x']);
     expect(parsed[1].positions).toEqual([{ text: 'A', qty: 1, unit: 'Stück', unitPrice: 0, vat: 19, refundable: true }]);
     expect(parsed[0].options.limitBytes).toBe(1663);
+  });
+});
+
+describe('sanitizeReceipt', () => {
+  const good = { bonNr: '5', start: 1700000000, end: 1700000009, tseSignature: 'a', tsePublicKey: 'b', externalRef: '', positions: [{ text: 'x', qty: 1, unit: 'Stück', unitPrice: 60, vat: 19, refundable: true }] };
+  it('akzeptiert einen gültigen Bon', () => expect(sanitizeReceipt(good)).toEqual(good));
+  it('füllt fehlende Positionsfelder mit Standardwerten', () => {
+    expect(sanitizeReceipt({ ...good, positions: [{ text: 'x' }] })?.positions[0]).toEqual({ text: 'x', qty: 1, unit: 'Stück', unitPrice: 0, vat: 19, refundable: true });
+  });
+  it('verwirft unbrauchbare Bons', () => {
+    for (const bad of [null, 'x', {}, { ...good, positions: [] }, { ...good, positions: [5] }, { ...good, start: 'gestern' }, { ...good, bonNr: 5 }]) expect(sanitizeReceipt(bad)).toBeNull();
   });
 });
