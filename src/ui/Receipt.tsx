@@ -1,4 +1,6 @@
 import { euro, formatEpoch, formatQty, money, positionGross, type Merchant, type Receipt as ReceiptData } from '../dakz';
+import type { CSSProperties } from 'react';
+import { fmtDots, fmtMm, printableMm, qrLayout, type ModuleDots } from '../qr/layout';
 import { QrSvg } from './QrSvg';
 import type { PaperWidth } from './state';
 import type { RenderedBon } from './useCodes';
@@ -10,13 +12,18 @@ interface Props {
   merchant: Merchant;
   bon: RenderedBon;
   paper: PaperWidth;
+  moduleDots: ModuleDots;
 }
 
-export function Receipt({ receipt, merchant, bon, paper }: Props) {
+export function Receipt({ receipt, merchant, bon, paper, moduleDots }: Props) {
   const t = bon.totals;
   const stars = '*'.repeat(48);
   return (
-    <article className={`receipt ${paper === 58 ? 'w58' : ''}`} aria-label={`Kassenbon ${receipt.bonNr}`}>
+    <article
+      className={`receipt ${paper === 58 ? 'w58' : ''}`}
+      aria-label={`Kassenbon ${receipt.bonNr}`}
+      style={{ '--print-mm': printableMm(paper) } as CSSProperties}
+    >
       <div className="stamp" aria-hidden="true">TESTBELEG</div>
       <div className="c b big">{merchant.name}</div>
       <div className="c">{merchant.address}</div>
@@ -74,15 +81,22 @@ export function Receipt({ receipt, merchant, bon, paper }: Props) {
       <div className="rule" />
       <div className="c b">Digitaler Ausfuhrkassenzettel</div>
       <div className="c small">Einkaufsdaten für dAKZ – mit der eZOLL-App scannen</div>
-      {bon.codes.map((c) => (
-        <div className="qr-block" key={c.index}>
-          {c.matrix ? <QrSvg matrix={c.matrix} label={`QR-Code ${c.index} von ${c.count}`} /> : <div className="qr-err">{c.qrError}</div>}
-          <div className="qr-cap">
-            QR {c.index}/{c.count}
-            {c.matrix && ` · V${c.matrix.version} · ${c.bytes} Byte`}
+      {bon.codes.map((c) => {
+        const layout = c.matrix ? qrLayout(c.matrix.size, moduleDots, paper) : null;
+        return (
+          <div className="qr-block" key={c.index}>
+            {c.matrix && layout ? (
+              <QrSvg matrix={c.matrix} label={`QR-Code ${c.index} von ${c.count}`} style={{ '--qr-mm': layout.widthMm } as CSSProperties} />
+            ) : (
+              <div className="qr-err">{c.qrError}</div>
+            )}
+            <div className="qr-cap">
+              QR {c.index}/{c.count}
+              {c.matrix && layout && ` · V${c.matrix.version} · ${c.bytes} Byte · ${fmtMm(layout.widthMm)} mm · ${fmtDots(layout.dots)} Punkte${layout.shrunk ? ' (angepasst)' : ''}`}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
       <div className="rule" />
       <div className="c small">Simulation · kein steuerlich gültiger Beleg</div>
       <div className="c small">Summe {euro(t.gross)}</div>

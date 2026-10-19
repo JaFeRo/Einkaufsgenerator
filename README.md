@@ -14,8 +14,9 @@ Alle erzeugten Belege sind Testdaten mit fiktiven Händlerangaben, tragen den Au
 - QR-Codes im Byte-Modus (UTF-8) mit Fehlerkorrektur Q; automatische Aufteilung ab 1.663 Byte oder einer selbst gewählten Grenze
 - TSE-Daten zufällig oder als echte ECDSA-Signatur (P-384)
 - Fehler einbauen für Negativtests (Summen, Zeilen, CRLF, Steuersatz-Format, ECC M)
-- Scanmodus: Code bildschirmfüllend, Pfeiltasten für Teilcodes, Leertaste für den nächsten Bon, N für gleichen Einkauf mit neuer Bon-Nr.
-- Druck für 58- oder 80-mm-Papier mit Angabe der Modulgröße, Export als PNG und TXT, Serie als ZIP, Bon als Link teilen
+- Scanmodus: Code groß auf dem Bildschirm (kleinere Codes proportional kleiner), Pfeiltasten für Teilcodes, Leertaste für den nächsten Bon, N für gleichen Einkauf mit neuer Bon-Nr.
+- QR-Größe wie auf dem echten Bon: feste Modulgröße (3, 4 oder 6 Druckpunkte bei 203 dpi), der Code wird mit dem Inhalt größer und füllt erst ab einer bestimmten Menge die Druckbreite (72 mm bei 80-mm-, 48 mm bei 58-mm-Papier); gilt für Bildschirm und Druck
+- Druck für 58- oder 80-mm-Papier, Export als PNG und TXT, Serie als ZIP, Bon als Link teilen
 
 **Rückprüfung**
 - Codes per Kamera, Foto/Screenshot (auch Drag & Drop und Strg+V) oder als Text einlesen

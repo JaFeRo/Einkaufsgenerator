@@ -1,6 +1,7 @@
 import { DEFAULT_OPTIONS, MERCHANT, deriveExternalRef, newSeed, sanitizeReceipt } from '../dakz';
 import type { Faults, GenerateOptions, Merchant, Receipt } from '../dakz';
 import { buildBon } from './sources';
+import { DEFAULT_MODULE_DOTS, MODULE_DOT_CHOICES, type ModuleDots } from '../qr/layout';
 import { KEYS, loadJson } from './storage';
 
 export type TseMode = 'random' | 'ecdsa';
@@ -16,6 +17,8 @@ export interface AppState {
   eccOverride: 'M' | null;
   tseMode: TseMode;
   paper: PaperWidth;
+  /** Gewünschte Druckpunkte je QR-Modul (203 dpi) */
+  moduleDots: ModuleDots;
   /** BON_NR, die diesem Bon gehört (vom Zähler vergeben oder beim Scannen beansprucht) */
   assignedBonNr: string;
 }
@@ -34,6 +37,7 @@ export function initialState(takeBonNr: () => string): AppState {
     eccOverride: null,
     tseMode: 'random',
     paper: 80,
+    moduleDots: DEFAULT_MODULE_DOTS,
     assignedBonNr: bonNr
   };
 }
@@ -49,6 +53,7 @@ export type Action =
   | { type: 'ecc'; value: 'M' | null }
   | { type: 'tseMode'; value: TseMode }
   | { type: 'paper'; value: PaperWidth }
+  | { type: 'moduleDots'; value: ModuleDots }
   | { type: 'source'; scenarioId: string };
 
 export function reducer(state: AppState, action: Action): AppState {
@@ -90,6 +95,8 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, tseMode: action.value };
     case 'paper':
       return { ...state, paper: action.value };
+    case 'moduleDots':
+      return { ...state, moduleDots: action.value };
     case 'source':
       return { ...state, scenarioId: action.scenarioId };
   }
@@ -98,8 +105,8 @@ export function reducer(state: AppState, action: Action): AppState {
 // ---------- Persistenz und Teilen per Link ----------
 
 export function persistable(state: AppState) {
-  const { scenarioId, receipt, merchant, options, eccOverride, tseMode, paper, assignedBonNr } = state;
-  return { v: 1, scenarioId, receipt, merchant, options, eccOverride, tseMode, paper, assignedBonNr };
+  const { scenarioId, receipt, merchant, options, eccOverride, tseMode, paper, moduleDots, assignedBonNr } = state;
+  return { v: 1, scenarioId, receipt, merchant, options, eccOverride, tseMode, paper, moduleDots, assignedBonNr };
 }
 
 function sanitize(d: unknown): AppState | null {
@@ -115,6 +122,7 @@ function sanitize(d: unknown): AppState | null {
     eccOverride: x.eccOverride === 'M' ? 'M' : null,
     tseMode: x.tseMode === 'ecdsa' ? 'ecdsa' : 'random',
     paper: x.paper === 58 ? 58 : 80,
+    moduleDots: MODULE_DOT_CHOICES.includes(x.moduleDots) ? x.moduleDots : DEFAULT_MODULE_DOTS,
     assignedBonNr: typeof x.assignedBonNr === 'string' ? x.assignedBonNr : receipt.bonNr
   };
 }

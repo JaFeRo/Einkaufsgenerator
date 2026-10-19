@@ -105,6 +105,7 @@ tests/
 | 3 – Ausgabe | erledigt: Druck 58/80 mm mit Modulgrößen-Hinweis, PNG, TXT, Serie als ZIP |
 | 4 – Rückprüfung | erledigt: Kamera, Upload/Einfügen, Text; Zusammenführung mehrteiliger Bons |
 | 5 – Feinschliff | ECDSA-Signatur und Pages-Workflow erledigt; offen: Playwright-Tests im CI |
+| 7 – QR-Größe wie gedruckt | erledigt: feste Modulgröße (3/4/6 Punkte), Code wächst mit dem Inhalt bis zur Druckbreite, gleiches Verhalten auf Bildschirm, im Druckdialog und im Scanmodus; Tests für Version-Wahl und Layout |
 | 6 – Eigene Bons & BON_NR | erledigt: Bons speichern/laden/exportieren/importieren; fortlaufender, eindeutiger BON_NR-Zähler (Duplikatsprüfung im Backend läuft über BON_NR); Doppel-Erkennung in der Rückprüfung |
 
 Manuell geprüft (Chromium, Playwright): Überlauf-Bon mit 3 Codes im Scanmodus fotografiert und in der Rückprüfung hochgeladen → „Vollständig & konform“; Druck-PDF (80 mm) mit 300 dpi gerastert → alle Codes lesbar; Serien-ZIP; Link-Rundlauf; 390 px ohne horizontalen Überlauf.

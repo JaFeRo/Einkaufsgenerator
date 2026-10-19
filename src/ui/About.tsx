@@ -65,7 +65,10 @@ export function About() {
             Zähler liegt im Browser; testen mehrere Personen, sollte jede einen eigenen Startbereich wählen.
           </li>
           <li>Eigene Bons speichern Positionen, Händler, Optionen und eingebaute Fehler. Beim Laden gibt es eine neue Bon-Nr. und die aktuelle Uhrzeit.</li>
-          <li>Druck: Papierbreite 58 oder 80 mm wählen, im Druckdialog Ränder auf „keine“ stellen. Der Prüfer zeigt die zu erwartende Modulgröße.</li>
+          <li>
+            Druck: Papierbreite 58 oder 80 mm wählen, im Druckdialog Ränder auf „keine“ und Skalierung auf 100 % stellen. Die Modulgröße ist fest (Standard 4 Punkte
+            = 0,5 mm bei 203 dpi): Kleine Codes werden klein gedruckt, größere wachsen, bis sie die Druckbreite füllen.
+          </li>
           <li>„Link teilen“ legt den kompletten Bon in die Adresse, damit ein Testfall reproduzierbar bleibt.</li>
           <li>Alle Belege tragen den Aufdruck „TESTBELEG“ und fiktive Händlerdaten. Sie sind keine steuerlich gültigen Belege.</li>
         </ul>

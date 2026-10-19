@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react';
+import type { CSSProperties } from 'react';
+import { QUIET_MODULES } from '../qr/layout';
 import { QrSvg } from './QrSvg';
+
+/** Gesamtmodule inklusive Ruhezone bei Version 40: Dieser Code füllt den Bildschirm, kleinere bleiben proportional kleiner. */
+const MAX_TOTAL_MODULES = 177 + QUIET_MODULES * 2;
 import type { RenderedBon } from './useCodes';
 
 interface Props {
@@ -44,7 +49,7 @@ export function ScanOverlay({ bon, bonNr, duplicate, onClose, onNextBon, onRenum
         </span>
         <button onClick={onClose}>Schließen</button>
       </div>
-      <div className="qr-big">{c.matrix ? <QrSvg matrix={c.matrix} label={`QR-Code ${c.index} von ${c.count}`} /> : <div className="qr-err">{c.qrError}</div>}</div>
+      <div className="qr-big">{c.matrix ? <QrSvg matrix={c.matrix} label={`QR-Code ${c.index} von ${c.count}`} style={{ '--frac': (c.matrix.size + QUIET_MODULES * 2) / MAX_TOTAL_MODULES } as CSSProperties} /> : <div className="qr-err">{c.qrError}</div>}</div>
       <div className="bar-bottom">
         {bon.codes.length > 1 && (
           <>

@@ -20,6 +20,8 @@
   --font-data: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
   --font-receipt: 'Courier Prime', 'Courier New', ui-monospace, monospace;
   --paper-width: 80mm;
+  /* Bildschirmmaßstab des Bons: 80 mm entsprechen 340 px. Beim Druck gilt echtes Millimeter. */
+  --u: 4.25px;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -114,11 +116,11 @@ table.pos input, table.pos select { padding: 5px 6px; }
 .stage-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .receipt {
   width: min(100%, 340px); background: var(--paper); color: var(--paper-ink); font: 13px/1.35 var(--font-receipt);
-  padding: 22px 20px 26px; box-shadow: var(--shadow); position: relative; min-width: 0;
+  padding: 22px 17px 26px; box-shadow: var(--shadow); position: relative; min-width: 0;
   -webkit-mask: radial-gradient(circle 5px at 50% 100%, transparent 98%, #000) 0 0 / 12px 100% repeat-x, linear-gradient(#000, #000) 0 0 / 100% calc(100% - 5px) no-repeat;
   mask: radial-gradient(circle 5px at 50% 100%, transparent 98%, #000) 0 0 / 12px 100% repeat-x, linear-gradient(#000, #000) 0 0 / 100% calc(100% - 5px) no-repeat;
 }
-.receipt.w58 { width: min(100%, 250px); font-size: 11.5px; padding-inline: 12px; }
+.receipt.w58 { width: min(100%, 246.5px); font-size: 11.5px; padding-inline: 21px; }
 .receipt .c { text-align: center; }
 .receipt .b { font-weight: 700; }
 .receipt .big { font-size: 1.3em; letter-spacing: 0.02em; }
@@ -131,13 +133,14 @@ table.pos input, table.pos select { padding: 5px 6px; }
 .receipt .sub { padding-left: 14px; font-size: 0.92em; }
 .receipt .sig { font-size: 0.8em; overflow-wrap: anywhere; line-height: 1.3; }
 .receipt .qr-block { display: grid; justify-items: center; gap: 4px; margin-top: 10px; break-inside: avoid; }
-.receipt .qr-block svg { width: 100%; height: auto; display: block; }
+.receipt .qr-block svg { width: calc(var(--qr-mm, 72) * var(--u)); max-width: min(100%, calc(var(--print-mm, 72) * var(--u))); height: auto; display: block; }
 .receipt .qr-cap { font-size: 0.85em; text-align: center; }
 .receipt .stamp {
   position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-18deg);
   font: 800 34px/1 var(--font-display); font-stretch: 75%; letter-spacing: 0.12em; color: #c0392b; opacity: 0.13;
   border: 4px solid currentColor; padding: 6px 14px; pointer-events: none; white-space: nowrap;
 }
+.receipt.w58 .stamp { font-size: 22px; padding: 4px 8px; border-width: 3px; letter-spacing: 0.08em; }
 .qr-err { font: 12px var(--font-ui); color: #b83a12; text-align: center; border: 1px dashed #b83a12; padding: 10px; }
 
 /* Prüfer */
@@ -180,7 +183,7 @@ dl.fields .nm { color: var(--muted); font-size: 11px; }
   padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px calc(env(safe-area-inset-bottom, 0px) + 16px); }
 .scan .bar-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-weight: 600; }
 .scan .qr-big { display: grid; place-items: center; min-height: 0; }
-.scan .qr-big svg { width: min(86vmin, 680px); height: auto; }
+.scan .qr-big svg { width: calc(min(86vmin, 680px) * var(--frac, 1)); height: auto; }
 .scan .bar-bottom { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
 .scan button { font-weight: 600; border: 1px solid #ccc; background: #fff; color: #111; padding: 10px 18px; border-radius: 8px; cursor: pointer; }
 .scan button:disabled { opacity: 0.4; }
@@ -222,6 +225,7 @@ table.data td.n { text-align: right; font-family: var(--font-data); font-variant
 
 /* Druck: nur der Bon, in Papierbreite */
 @media print {
+  :root { --u: 1mm; }
   @page { margin: 0; }
   body { background: #fff; }
   .no-print, .top, .bench > .panel, .stage-actions, .scan, .toast, .checker, .about { display: none !important; }
@@ -231,8 +235,8 @@ table.data td.n { text-align: right; font-family: var(--font-data); font-variant
     font-size: 10pt; color: #000;
   }
   .receipt.w58 { font-size: 8.5pt; padding-inline: 1.5mm; }
+  .receipt { overflow: hidden; }
   .receipt .stamp { opacity: 0.18; }
-  .receipt .qr-block svg { width: var(--qr-print-width, 100%); }
 }
 
 /* Eigene Bons und Bon-Nummer */

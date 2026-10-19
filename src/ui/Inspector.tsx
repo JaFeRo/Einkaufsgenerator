@@ -1,5 +1,6 @@
 import { useState, type Dispatch } from 'react';
 import { formatEpoch, SPEC } from '../dakz';
+import { DOT_MM, MODULE_DOT_CHOICES, fmtDots, fmtMm, qrLayout } from '../qr/layout';
 import { download, qrPng, seriesZip } from './exporting';
 import { CsvView, Findings, StatusPill } from './Findings';
 import { shareHash, type Action, type AppState } from './state';
@@ -8,10 +9,7 @@ import type { BonCounter } from './useBonCounter';
 import type { RenderedBon } from './useCodes';
 import type { SavedBonsApi } from './useSavedBons';
 
-/** Bedruckbare Breite in mm bei 3 mm Rand je Seite. */
-const printableMm = (paper: number) => paper - 6;
 /** 203 dpi → 0,125 mm je Punkt; drei Punkte je Modul gelten als sicher lesbar. */
-const MIN_MODULE_MM = 0.375;
 
 interface Props {
   state: AppState;
@@ -39,7 +37,7 @@ export function Inspector({ state, dispatch, bon, notify, counter, actions, save
   if (bon.ecc !== 'Q') findings.push({ severity: 'warning', ref: 'V4', message: `Kodiert mit Fehlerkorrektur ${bon.ecc}, die Spezifikation verlangt Q`, prefix: undefined });
 
   const largest = Math.max(...bon.codes.map((c) => c.matrix?.size ?? 0));
-  const moduleMm = largest ? printableMm(state.paper) / (largest + 8) : 0;
+  const layout = largest ? qrLayout(largest, state.moduleDots, state.paper) : null;
 
   const copy = async () => {
     try {
@@ -169,12 +167,23 @@ export function Inspector({ state, dispatch, bon, notify, counter, actions, save
             Drucken
           </button>
         </div>
-        {moduleMm > 0 && (
-          <p className="hint" style={moduleMm < MIN_MODULE_MM ? { color: 'var(--warn)' } : undefined}>
-            Modulgröße beim Druck ≈ {moduleMm.toFixed(2).replace('.', ',')} mm
-            {moduleMm < MIN_MODULE_MM
-              ? ` – unter ${String(MIN_MODULE_MM).replace('.', ',')} mm (3 Punkte bei 203 dpi). Grenze je Code senken, damit kleinere Codes entstehen.`
-              : ' – ausreichend für Thermodrucker mit 203 dpi.'}
+        <label className="field" style={{ maxWidth: 260 }}>
+          Modulgröße beim Druck (Ziel)
+          <select id="module-dots" value={state.moduleDots} onChange={(e) => dispatch({ type: 'moduleDots', value: Number(e.target.value) as 3 | 4 | 6 })}>
+            {MODULE_DOT_CHOICES.map((d) => (
+              <option key={d} value={d}>
+                {d} Punkte = {fmtMm(d * DOT_MM, 3)} mm{d === 4 ? ' (Standard)' : ''}
+              </option>
+            ))}
+          </select>
+        </label>
+        {layout && (
+          <p className="hint" style={layout.dots < 3 ? { color: 'var(--warn)' } : undefined}>
+            Größter Code auf dem Bon: {fmtMm(layout.widthMm)} mm breit bei {fmtDots(layout.dots)} Punkten je Modul ({fmtMm(layout.moduleMm, 3)} mm, 203 dpi).
+            {layout.shrunk
+              ? ` Er füllt die ${fmtMm(state.paper === 58 ? 48 : 72, 0)} mm Druckbreite, die Module wurden dafür kleiner als gewünscht.`
+              : ' Kleinere Codes werden entsprechend schmaler gedruckt.'}
+            {layout.dots < 3 && ' Unter 3 Punkten je Modul wird das Scannen von Thermodruck unsicher.'}
           </p>
         )}
         <div className="row">

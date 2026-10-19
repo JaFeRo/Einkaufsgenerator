@@ -73,7 +73,7 @@ export function Generator({ state, dispatch, counter, saved, notify }: Props) {
           Quelle: {sourceLabel(state.scenarioId, saved.bons)} · Bon-Nr. <b className="mono">{receipt.bonNr}</b>
           {actions.duplicate && <span style={{ color: 'var(--err)' }}> · bereits verwendet</span>}
         </p>
-        <Receipt receipt={receipt} merchant={state.merchant} bon={bon} paper={state.paper} />
+        <Receipt receipt={receipt} merchant={state.merchant} bon={bon} paper={state.paper} moduleDots={state.moduleDots} />
       </section>
       <Inspector state={state} dispatch={dispatch} bon={bon} notify={notify} counter={counter} actions={actions} saved={saved} />
       {scan && (
