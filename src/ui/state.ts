@@ -1,4 +1,4 @@
-import { DEFAULT_OPTIONS, MERCHANT, deriveExternalRef, newSeed, sanitizeReceipt } from '../dakz';
+import { DEFAULT_OPTIONS, DEFAULT_SPEC, MERCHANT, deriveExternalRef, isSpecVersion, newSeed, sanitizeReceipt, type SpecVersion } from '../dakz';
 import type { Faults, GenerateOptions, Merchant, Receipt } from '../dakz';
 import { buildBon } from './sources';
 import { DEFAULT_MODULE_DOTS, MODULE_DOT_CHOICES, type ModuleDots } from '../qr/layout';
@@ -8,6 +8,8 @@ export type TseMode = 'random' | 'ecdsa';
 export type PaperWidth = 58 | 80;
 
 export interface AppState {
+  /** Gewählte Fassung der Spezifikation */
+  spec: SpecVersion;
   /** Szenario-ID oder „tpl:<id>“ für einen gespeicherten Bon */
   scenarioId: string;
   receipt: Receipt;
@@ -30,6 +32,7 @@ export function initialState(takeBonNr: () => string): AppState {
   if (stored) return stored;
   const bonNr = takeBonNr();
   return {
+    spec: DEFAULT_SPEC,
     scenarioId: 'random',
     receipt: buildBon('random', [], bonNr, newSeed()).receipt,
     merchant: { ...MERCHANT },
@@ -54,7 +57,8 @@ export type Action =
   | { type: 'tseMode'; value: TseMode }
   | { type: 'paper'; value: PaperWidth }
   | { type: 'moduleDots'; value: ModuleDots }
-  | { type: 'source'; scenarioId: string };
+  | { type: 'source'; scenarioId: string }
+  | { type: 'spec'; value: SpecVersion };
 
 export function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -99,14 +103,16 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, moduleDots: action.value };
     case 'source':
       return { ...state, scenarioId: action.scenarioId };
+    case 'spec':
+      return { ...state, spec: action.value };
   }
 }
 
 // ---------- Persistenz und Teilen per Link ----------
 
 export function persistable(state: AppState) {
-  const { scenarioId, receipt, merchant, options, eccOverride, tseMode, paper, moduleDots, assignedBonNr } = state;
-  return { v: 1, scenarioId, receipt, merchant, options, eccOverride, tseMode, paper, moduleDots, assignedBonNr };
+  const { spec, scenarioId, receipt, merchant, options, eccOverride, tseMode, paper, moduleDots, assignedBonNr } = state;
+  return { v: 1, spec, scenarioId, receipt, merchant, options, eccOverride, tseMode, paper, moduleDots, assignedBonNr };
 }
 
 function sanitize(d: unknown): AppState | null {
@@ -115,6 +121,7 @@ function sanitize(d: unknown): AppState | null {
   const receipt = sanitizeReceipt(x.receipt);
   if (x.v !== 1 || !receipt) return null;
   return {
+    spec: isSpecVersion(x.spec) ? x.spec : DEFAULT_SPEC,
     scenarioId: String(x.scenarioId ?? 'random'),
     receipt,
     merchant: { ...MERCHANT, ...x.merchant },

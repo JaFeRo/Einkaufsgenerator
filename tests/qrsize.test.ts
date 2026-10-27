@@ -38,7 +38,7 @@ describe('Kleinstmögliche QR-Größe', () => {
       const { codes } = generate(bonWith(n, 42));
       if (codes.length > 1 && !firstSplit) firstSplit = n;
       if (!firstSplit) {
-        const v = encodeQr(codes[0].text, 'Q').version;
+        const v = encodeQr(codes[0].text, 'Q', codes[0].charset).version;
         expect(v, `${n} Positionen`).toBeGreaterThanOrEqual(last);
         expect(v).toBe(smallestVersion(codes[0].bytes));
         last = v;

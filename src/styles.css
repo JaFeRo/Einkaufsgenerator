@@ -253,3 +253,11 @@ ul.saved-list li.active { border-color: var(--accent); background: var(--accent-
 .saved-load:hover .saved-name { color: var(--accent); }
 .saved-name { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .scan .scan-nr { font-family: var(--font-data); font-size: 1.15em; }
+
+/* Fassung der Spezifikation und Testkennzeichen */
+.spec-switch { margin-left: auto; display: flex; align-items: center; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 3px 3px 3px 10px; }
+.spec-switch span { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-right: 4px; }
+.spec-switch button { font: 600 13px var(--font-data); border: 0; background: transparent; color: var(--muted); padding: 5px 12px; border-radius: 6px; cursor: pointer; }
+.spec-switch button[aria-checked='true'] { background: var(--ink); color: var(--panel); }
+.top .tabs { margin-left: 0; }
+.test-badge { font: 700 11px/1 var(--font-ui); letter-spacing: 0.08em; text-transform: uppercase; color: #fff; background: #b4541a; padding: 4px 8px; border-radius: 4px; align-self: center; }

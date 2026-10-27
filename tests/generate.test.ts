@@ -5,8 +5,8 @@ import { DEFAULT_OPTIONS, SCENARIOS, computeTotals, generate, money, positionGro
 const scenario = (id: string, seed = 1) => SCENARIOS.find((s) => s.id === id)!.build(seed);
 
 describe('generate', () => {
-  it('reproduziert Zoll-Beispiel 6.1 byte-genau', () => {
-    const { codes } = generate(scenario('zoll61'), { trailingLF: false });
+  it('reproduziert Zoll-Beispiel 6.1 aus Fassung 1.2 byte-genau', () => {
+    const { codes } = generate(scenario('zoll61'), { spec: '1.2', trailingLF: false });
     expect(codes).toHaveLength(1);
     expect(codes[0].text).toBe(examples.ex61);
   });

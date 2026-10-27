@@ -2,7 +2,7 @@
 
 Ein Simulator, der realistische Kassenbons mit QR-Codes für den **digitalen Ausfuhrkassenzettel (dAKZ)** erzeugt. Damit lässt sich das Einscannen mit der eZOLL-App (Dienst „Ausfuhrkassenzettel“) oder mit eigenen Scannern testen, ohne ein echtes Kassensystem.
 
-Grundlage: **„Schnittstellendefinition QR-Code – Technische Beschreibung des Datenformats“**, Generalzolldirektion, Version 1.2 vom 01.09.2026.
+Grundlage: **„Schnittstellendefinition QR-Code – Technische Beschreibung des Datenformats“**, Generalzolldirektion, Version 1.2 vom 01.09.2026 und Version 1.3 vom 26.10.2026 (vorgelegt). Die App schaltet zwischen beiden Fassungen um (`src/dakz/spec.ts`).
 Quelle: [zoll.de – Anbindung an dAKZ über die eZOLL-App](https://www.zoll.de/DE/Fachthemen/Steuern/Umsatzsteuererstattung/anbindung_dakz_ezoll.html) → „Anforderungen an den QR-Code“ (PDF).
 
 Die App liegt unter `src/` (siehe README). Der anfängliche HTML-Prototyp ist darin aufgegangen.
@@ -106,6 +106,7 @@ tests/
 | 4 – Rückprüfung | erledigt: Kamera, Upload/Einfügen, Text; Zusammenführung mehrteiliger Bons |
 | 5 – Feinschliff | ECDSA-Signatur und Pages-Workflow erledigt; offen: Playwright-Tests im CI |
 | 7 – QR-Größe wie gedruckt | erledigt: feste Modulgröße (3/4/6 Punkte), Code wächst mit dem Inhalt bis zur Druckbreite, gleiches Verhalten auf Bildschirm, im Druckdialog und im Scanmodus; Tests für Version-Wahl und Layout |
+| 8 – Fassungen 1.2/1.3 | erledigt (Testversion unter `/test/`): Umschalter im Kopf; 1.3 mit ISO 8859-1, E4 = Referenz, optional K8, neue Regex für P4 und M3–M5, 1.663 Zeichen; Rückprüfung erkennt Fassung und Kodierung je Bon; Fehlerinjektion „falsche Kodierung“; Golden-Test gegen Abb. 4 |
 | 6 – Eigene Bons & BON_NR | erledigt: Bons speichern/laden/exportieren/importieren; fortlaufender, eindeutiger BON_NR-Zähler (Duplikatsprüfung im Backend läuft über BON_NR); Doppel-Erkennung in der Rückprüfung |
 
 Manuell geprüft (Chromium, Playwright): Überlauf-Bon mit 3 Codes im Scanmodus fotografiert und in der Rückprüfung hochgeladen → „Vollständig & konform“; Druck-PDF (80 mm) mit 300 dpi gerastert → alle Codes lesbar; Serien-ZIP; Link-Rundlauf; 390 px ohne horizontalen Überlauf.

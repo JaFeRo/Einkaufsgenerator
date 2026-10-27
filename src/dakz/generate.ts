@@ -1,10 +1,13 @@
-import { csvField, formatQty, formatRate, money, utf8Length } from './format';
+import { csvField, formatQty, formatRate, money } from './format';
+import { SPECS, byteLength, encodeText, otherCharset, toCharsetText, unencodableLatin1, type Charset } from './spec';
 import type { GenerateOptions, GenerateResult, Position, Receipt, Totals } from './types';
 
 /** Version 40, ECC Q, Byte-Modus: 1.663 Byte (siehe docs/PLAN.md, Abschnitt 2). */
 export const QR_CAPACITY_Q_BYTES = 1663;
 
 export const DEFAULT_OPTIONS: GenerateOptions = {
+  spec: '1.3',
+  writeVersion: true,
   rateStyle: 'plain',
   trailingLF: true,
   limitBytes: QR_CAPACITY_Q_BYTES,
@@ -35,7 +38,7 @@ export function computeTotals(positions: Position[]): Totals {
 type Row = (string | number)[];
 
 interface Lines {
-  head: { bonNr: string; start: number; end: number; total: string };
+  head: { bonNr: string; start: number; end: number; total: string; version: string | null };
   e: Row | null;
   m: Row[];
   p: Row[];
@@ -54,10 +57,14 @@ function buildLines(receipt: Receipt, opt: GenerateOptions): Lines {
     bonNr: receipt.bonNr,
     start: receipt.start,
     end: f.endBeforeStart ? receipt.start - 60 : receipt.end,
-    total: money(totals.gross + (f.totalMismatch ? 100 : 0))
+    total: money(totals.gross + (f.totalMismatch ? 100 : 0)),
+    version: SPECS[opt.spec].versionField && opt.writeVersion ? opt.spec : null
   };
 
-  let e: Row | null = ['E', money(totals.net), money(totals.vat), receipt.tseSignature, receipt.tsePublicKey];
+  // 1.2: E4/E5 = TSE-Signatur und öffentlicher Schlüssel, E6 = Referenz. 1.3: E4 = Referenz.
+  let e: Row | null = SPECS[opt.spec].tse
+    ? ['E', money(totals.net), money(totals.vat), receipt.tseSignature, receipt.tsePublicKey]
+    : ['E', money(totals.net), money(totals.vat)];
   if (receipt.externalRef) e.push(receipt.externalRef);
   if (f.dropE) e = null;
 
@@ -78,7 +85,15 @@ function buildLines(receipt: Receipt, opt: GenerateOptions): Lines {
 }
 
 function kRow(head: Lines['head'], nr: number, count: number, writeCount: boolean): Row {
-  return ['K', nr, writeCount ? count : '', head.bonNr, head.start, head.end, head.total];
+  const row: Row = ['K', nr, writeCount ? count : '', head.bonNr, head.start, head.end, head.total];
+  if (head.version) row.push(head.version);
+  return row;
+}
+
+/** Zeichenkodierung, mit der tatsächlich erzeugt wird (Fehlerinjektion kehrt sie um). */
+export function effectiveCharset(opt: Pick<GenerateOptions, 'spec' | 'faults'>): Charset {
+  const c = SPECS[opt.spec].charset;
+  return opt.faults.wrongCharset ? otherCharset(c) : c;
 }
 
 /**
@@ -89,8 +104,10 @@ export function generate(receipt: Receipt, options: Partial<GenerateOptions> = {
   const opt: GenerateOptions = { ...DEFAULT_OPTIONS, ...options, faults: { ...options.faults } };
   const lb = opt.faults.crlf ? '\r\n' : '\n';
   const b = buildLines(receipt, opt);
-  const serializeRow = (r: Row) => r.map(csvField).join(';');
-  const rowLen = (r: Row) => utf8Length(serializeRow(r)) + utf8Length(lb);
+  const charset = effectiveCharset(opt);
+  const replaced = charset === 'iso-8859-1' ? unencodableLatin1([b.e, ...b.m, ...b.p].flat().join('')) : [];
+  const serializeRow = (r: Row) => toCharsetText(r.map(csvField).join(';'), charset);
+  const rowLen = (r: Row) => byteLength(serializeRow(r), charset) + lb.length;
 
   // Die Gesamtanzahl ändert die Länge der K-Zeile – bis zur Stabilität wiederholen.
   let count = 1;
@@ -125,8 +142,9 @@ export function generate(receipt: Receipt, options: Partial<GenerateOptions> = {
     const all = [kRow(b.head, i + 1, chunks.length, writeTotal), ...rows];
     let text = all.map(serializeRow).join(lb);
     if (opt.trailingLF) text += lb;
-    return { index: i + 1, count: chunks.length, text, bytes: utf8Length(text), chars: text.length };
+    const data = encodeText(text, charset);
+    return { index: i + 1, count: chunks.length, text, data, charset, bytes: data.length, chars: text.length };
   });
 
-  return { codes, totals: b.totals };
+  return { codes, totals: b.totals, replaced };
 }

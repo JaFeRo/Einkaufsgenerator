@@ -1,5 +1,5 @@
 import JSZip from 'jszip';
-import { formatEpoch, money, newSeed, signTse, type SavedBon } from '../dakz';
+import { SPECS, charsetLabel, effectiveCharset, formatEpoch, money, newSeed, signTse, type SavedBon } from '../dakz';
 import { matrixToRgba, type QrMatrix } from '../qr/encode';
 import { buildBon, sourceLabel } from './sources';
 import type { AppState } from './state';
@@ -50,10 +50,10 @@ export async function seriesZip(state: AppState, n: number, bons: SavedBon[], ta
     const options = template ? template.options : state.options;
     const eccOverride = template ? template.eccOverride : state.eccOverride;
     if (state.tseMode === 'ecdsa') Object.assign(receipt, await signTse(receipt).then((t) => ({ tseSignature: t.signature, tsePublicKey: t.publicKey })));
-    const bon = renderBon({ receipt, options, eccOverride });
+    const bon = renderBon({ receipt, options, eccOverride, spec: state.spec });
     const dir = zip.folder(`bon-${receipt.bonNr}`)!;
     for (const c of bon.codes) {
-      dir.file(`qr-${c.index}-von-${c.count}.txt`, c.text);
+      dir.file(`qr-${c.index}-von-${c.count}.txt`, c.data);
       if (c.matrix) dir.file(`qr-${c.index}-von-${c.count}.png`, await qrPng(c.matrix, `Bon ${receipt.bonNr} · QR ${c.index}/${c.count}`));
     }
     dir.file('bon.json', JSON.stringify({ seed, source: label, receipt }, null, 2));
@@ -75,7 +75,7 @@ export async function seriesZip(state: AppState, n: number, bons: SavedBon[], ta
   zip.file('uebersicht.csv', '﻿' + rows.map((r) => r.map(csvCell).join(';')).join('\r\n'));
   zip.file(
     'LIESMICH.txt',
-    `dAKZ Bonsimulator – Serienexport\nQuelle: ${label}\nAnzahl: ${n}\nBon-Nummern: fortlaufend vom Zähler, jede nur einmal\n\nAlle Daten sind Testdaten. Die .txt-Dateien enthalten den exakten QR-Inhalt (UTF-8).\n`
+    `dAKZ Bonsimulator – Serienexport\nSpezifikation: ${state.spec} (${SPECS[state.spec].date})\nQuelle: ${label}\nAnzahl: ${n}\nBon-Nummern: fortlaufend vom Zähler, jede nur einmal\n\nAlle Daten sind Testdaten. Die .txt-Dateien enthalten die exakten Bytes des QR-Inhalts (${charsetLabel(effectiveCharset({ spec: state.spec, faults: state.options.faults }))}).\n`
   );
   return zip.generateAsync({ type: 'blob' });
 }

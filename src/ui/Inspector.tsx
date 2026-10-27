@@ -1,5 +1,5 @@
 import { useState, type Dispatch } from 'react';
-import { formatEpoch, SPEC } from '../dakz';
+import { SPECS, charsetLabel, fieldSpecs, formatEpoch } from '../dakz';
 import { DOT_MM, MODULE_DOT_CHOICES, fmtDots, fmtMm, qrLayout } from '../qr/layout';
 import { download, qrPng, seriesZip } from './exporting';
 import { CsvView, Findings, StatusPill } from './Findings';
@@ -34,7 +34,14 @@ export function Inspector({ state, dispatch, bon, notify, counter, actions, save
     ...(c.qrError ? [{ severity: 'error' as const, message: c.qrError, prefix: bon.codes.length > 1 ? `QR ${c.index}` : undefined }] : []),
     ...c.check.findings.map((f) => ({ ...f, prefix: bon.codes.length > 1 ? `QR ${c.index}` : undefined }))
   ]);
-  if (bon.ecc !== 'Q') findings.push({ severity: 'warning', ref: 'V4', message: `Kodiert mit Fehlerkorrektur ${bon.ecc}, die Spezifikation verlangt Q`, prefix: undefined });
+  if (bon.ecc !== 'Q') findings.push({ severity: 'warning', ref: 'V4', message: `Kodiert mit Fehlerkorrektur ${bon.ecc}, die Spezifikation ${bon.spec === '1.3' ? 'empfiehlt' : 'verlangt'} Q`, prefix: undefined });
+  if (bon.replaced.length)
+    findings.push({
+      severity: 'warning',
+      ref: 'C2',
+      message: `In ISO 8859-1 nicht darstellbar, durch „?“ ersetzt: ${bon.replaced.join(' ')} – die Spezifikation regelt diesen Fall nicht`,
+      prefix: undefined
+    });
 
   const largest = Math.max(...bon.codes.map((c) => c.matrix?.size ?? 0));
   const layout = largest ? qrLayout(largest, state.moduleDots, state.paper) : null;
@@ -69,7 +76,10 @@ export function Inspector({ state, dispatch, bon, notify, counter, actions, save
 
   const txtAll = () => {
     actions.claim();
-    bon.codes.forEach((c) => download(new Blob([c.text], { type: 'text/plain;charset=utf-8' }), `bon-${state.receipt.bonNr}-qr-${c.index}-von-${c.count}.txt`));
+    // Exakte Bytes des QR-Inhalts, in der Kodierung der gewählten Fassung
+    bon.codes.forEach((c) =>
+      download(new Blob([c.data as BlobPart], { type: `text/plain;charset=${c.charset}` }), `bon-${state.receipt.bonNr}-qr-${c.index}-von-${c.count}.txt`)
+    );
   };
 
   const series = async () => {
@@ -89,7 +99,9 @@ export function Inspector({ state, dispatch, bon, notify, counter, actions, save
       <div className="status">
         <StatusPill errors={bon.errors} warnings={bon.warnings} />
         <span className="meta">
-          {bon.codes.length} QR-Code{bon.codes.length > 1 ? 's' : ''} · ECC {bon.ecc} · {bon.codes.reduce((a, c) => a + c.bytes, 0).toLocaleString('de-DE')} Byte gesamt
+          Spezifikation {bon.spec} · {charsetLabel(code.charset)}
+          {code.charset !== SPECS[bon.spec].charset ? ' (absichtlich falsch)' : ''} · {bon.codes.length} QR-Code{bon.codes.length > 1 ? 's' : ''} · ECC {bon.ecc} ·{' '}
+          {bon.codes.reduce((a, c) => a + c.bytes, 0).toLocaleString('de-DE')} Byte gesamt
         </span>
       </div>
 
@@ -128,14 +140,14 @@ export function Inspector({ state, dispatch, bon, notify, counter, actions, save
       <div className="section">
         <h3>Kopfzeile entschlüsselt</h3>
         <dl className="fields">
-          {SPEC.K.map((s, i) => {
+          {fieldSpecs(bon.spec).K.map((s, i) => {
             const v = k[i + 1] ?? '';
             return (
               <div key={s.id} style={{ display: 'contents' }}>
                 <dt>{s.id}</dt>
                 <dd className="nm">{s.name}</dd>
                 <dd>
-                  {v || <span className="nm">leer{s.id === 'K3' ? ' → 1' : ''}</span>}
+                  {v || <span className="nm">leer{s.id === 'K3' ? ' → 1' : s.id === 'K8' ? ' (optional)' : ''}</span>}
                   {(s.id === 'K5' || s.id === 'K6') && /^\d{10}$/.test(v) && <span className="nm"> = {formatEpoch(+v, true)} UTC</span>}
                 </dd>
               </div>

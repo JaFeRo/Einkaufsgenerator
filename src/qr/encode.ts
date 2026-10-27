@@ -1,8 +1,6 @@
 import qrcode from 'qrcode-generator';
+import { encodeText, type Charset } from '../dakz/spec';
 import type { EccLevel } from '../dakz/types';
-
-// UTF-8 statt Latin-1: Umlaute wie in „Stück“ müssen als Mehrbyte-Folge im Byte-Modus landen.
-qrcode.stringToBytes = (s: string) => Array.from(new TextEncoder().encode(s));
 
 export interface QrMatrix {
   /** Kantenlänge in Modulen (ohne Ruhezone) */
@@ -16,8 +14,12 @@ export interface QrMatrix {
 
 export class QrCapacityError extends Error {}
 
-/** Kodiert Text im Byte-Modus mit kleinstmöglicher Version (V2 der Spezifikation). */
-export function encodeQr(text: string, ecc: EccLevel): QrMatrix {
+/**
+ * Kodiert Text im Byte-Modus mit kleinstmöglicher Version (V2 der Spezifikation), ohne ECI.
+ * Die Bytes entsprechen der gewählten Zeichenkodierung: 1.2 UTF-8, 1.3 ISO 8859-1.
+ */
+export function encodeQr(text: string, ecc: EccLevel, charset: Charset = 'utf-8'): QrMatrix {
+  qrcode.stringToBytes = (s: string) => Array.from(encodeText(s, charset));
   const q = qrcode(0, ecc);
   q.addData(text, 'Byte');
   try {

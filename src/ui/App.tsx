@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import { SPECS, SPEC_VERSIONS } from '../dakz';
 import { About } from './About';
 import { Checker } from './Checker';
 import { Generator } from './Generator';
@@ -13,6 +14,9 @@ const VIEWS: { id: View; label: string }[] = [
   { id: 'checker', label: 'Rückprüfung' },
   { id: 'about', label: 'Spezifikation' }
 ];
+
+/** Testkanal: wird beim Bauen der Testversion gesetzt (VITE_CHANNEL=test). */
+const IS_TEST = import.meta.env.VITE_CHANNEL === 'test';
 
 const viewFromHash = (): View => (window.location.hash === '#pruefen' ? 'checker' : window.location.hash === '#info' ? 'about' : 'generator');
 
@@ -52,7 +56,27 @@ export function App() {
       <header className="top">
         <div className="brand">
           <h1>dAKZ Bonsimulator</h1>
-          <span className="tag">QR-Spezifikation v1.2 · Testdaten</span>
+          {IS_TEST && <span className="test-badge">Testversion</span>}
+          <span className="tag">
+            QR-Spezifikation {state.spec} · {SPECS[state.spec].charsetLabel} · Testdaten
+          </span>
+        </div>
+        <div className="spec-switch" role="radiogroup" aria-label="Fassung der Spezifikation">
+          <span>Spezifikation</span>
+          {SPEC_VERSIONS.map((v) => (
+            <button
+              key={v}
+              role="radio"
+              aria-checked={state.spec === v}
+              title={`Fassung ${v} vom ${SPECS[v].date} (${SPECS[v].status})`}
+              onClick={() => {
+                dispatch({ type: 'spec', value: v });
+                notify(`Spezifikation ${v}: ${SPECS[v].charsetLabel}${SPECS[v].tse ? ', mit TSE-Feldern' : ', ohne TSE-Felder'}`);
+              }}
+            >
+              {v}
+            </button>
+          ))}
         </div>
         <nav className="tabs" role="tablist" aria-label="Bereiche">
           {VIEWS.map((v) => (
@@ -63,8 +87,8 @@ export function App() {
         </nav>
       </header>
       {view === 'generator' && <Generator state={state} dispatch={dispatch} counter={counter} saved={saved} notify={notify} />}
-      {view === 'checker' && <Checker notify={notify} />}
-      {view === 'about' && <About />}
+      {view === 'checker' && <Checker notify={notify} spec={state.spec} />}
+      {view === 'about' && <About spec={state.spec} />}
       {toast && (
         <div className="toast" role="status">
           {toast}

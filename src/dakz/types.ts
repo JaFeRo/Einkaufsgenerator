@@ -1,7 +1,8 @@
 /**
- * Datenmodell nach der „Schnittstellendefinition QR-Code“ der Generalzolldirektion,
- * Version 1.2 vom 01.09.2026 (Verfahren dAKZ).
+ * Datenmodell nach der „Schnittstellendefinition QR-Code“ der Generalzolldirektion
+ * (Verfahren dAKZ), Fassungen 1.2 und 1.3 – siehe spec.ts.
  */
+import type { Charset, SpecVersion } from './spec';
 
 export interface Position {
   /** P7 ARTIKELTEXT */
@@ -25,11 +26,11 @@ export interface Receipt {
   start: number;
   /** K6 BON_ENDE, Unix-Sekunden UTC */
   end: number;
-  /** E4 TSE_TA_SIG (Base64) */
+  /** 1.2: E4 TSE_TA_SIG (Base64). Ab 1.3 nicht mehr im QR-Code, aber weiter auf dem Bon. */
   tseSignature: string;
-  /** E5 TSE_PUBLIC_KEY (Base64) */
+  /** 1.2: E5 TSE_PUBLIC_KEY (Base64) */
   tsePublicKey: string;
-  /** E6 externeKundenReferenz, optional */
+  /** externeKundenReferenz, optional (1.2: E6, 1.3: E4) */
   externalRef: string;
   positions: Position[];
 }
@@ -55,12 +56,18 @@ export interface Faults {
   noPositions?: boolean;
   /** Steuersatz mit Leerzeichen wie im PDF-Regex (P2/M2) */
   rateWithSpace?: boolean;
+  /** Mit der jeweils anderen Zeichenkodierung erzeugen (1.3: UTF-8 statt ISO 8859-1) */
+  wrongCharset?: boolean;
 }
 
 export type RateStyle = 'plain' | 'fixed';
 export type EccLevel = 'L' | 'M' | 'Q' | 'H';
 
 export interface GenerateOptions {
+  /** Fassung der Spezifikation */
+  spec: SpecVersion;
+  /** 1.3: K8 Versionsnummer schreiben */
+  writeVersion: boolean;
   /** „19“ wie in den Beispielen oder „19,00“ wie im Feldbeispiel */
   rateStyle: RateStyle;
   /** EBNF: jeder record endet mit LF */
@@ -90,7 +97,11 @@ export interface Totals {
 export interface GeneratedCode {
   index: number;
   count: number;
+  /** Inhalt als Zeichenkette (nicht darstellbare Zeichen bereits ersetzt) */
   text: string;
+  /** Exakte Bytes im Byte-Segment des QR-Codes */
+  data: Uint8Array;
+  charset: Charset;
   bytes: number;
   chars: number;
 }
@@ -98,6 +109,8 @@ export interface GeneratedCode {
 export interface GenerateResult {
   codes: GeneratedCode[];
   totals: Totals;
+  /** Zeichen, die in der Zielkodierung fehlen und durch „?“ ersetzt wurden */
+  replaced: string[];
 }
 
 export type Severity = 'error' | 'warning';
@@ -118,4 +131,6 @@ export interface CodeCheck {
   chars: number;
   /** K2 = 1 */
   primary: boolean;
+  /** Fassung, nach der geprüft wurde */
+  spec: SpecVersion;
 }

@@ -1,6 +1,6 @@
 # Einkaufsgenerator – dAKZ Bonsimulator
 
-Erzeugt Test-Kassenbons mit QR-Codes nach der „Schnittstellendefinition QR-Code“ der Generalzolldirektion (digitaler Ausfuhrkassenzettel, dAKZ, Version 1.2) und prüft eingescannte Codes gegen die Spezifikation.
+Erzeugt Test-Kassenbons mit QR-Codes nach der „Schnittstellendefinition QR-Code“ der Generalzolldirektion (digitaler Ausfuhrkassenzettel, dAKZ, Versionen 1.2 und 1.3, oben rechts umschaltbar) und prüft eingescannte Codes gegen die Spezifikation.
 
 Alle erzeugten Belege sind Testdaten mit fiktiven Händlerangaben, tragen den Aufdruck „TESTBELEG“ und sind keine steuerlich gültigen Belege.
 
@@ -11,7 +11,7 @@ Alle erzeugten Belege sind Testdaten mit fiktiven Händlerangaben, tragen den Au
 - Positionen und Kopfdaten frei bearbeitbar, Prüfung live
 - **Eigene Bons** als Testfälle speichern, laden, aktualisieren, löschen sowie als JSON exportieren und importieren (im Browser gespeichert)
 - **Eindeutige BON_NR**: fortlaufender Zähler, jeder neue Bon bekommt die nächste freie Nummer; „Gleicher Einkauf, neue Nr.“ für wiederholte Scans; Warnung bei schon verwendeten Nummern; Startwert frei setzbar
-- QR-Codes im Byte-Modus (UTF-8) mit Fehlerkorrektur Q; automatische Aufteilung ab 1.663 Byte oder einer selbst gewählten Grenze
+- QR-Codes im Byte-Modus (1.2: UTF-8 mit TSE-Feldern, 1.3: ISO 8859-1 ohne TSE, optional K8) mit Fehlerkorrektur Q; automatische Aufteilung ab 1.663 Byte oder einer selbst gewählten Grenze
 - TSE-Daten zufällig oder als echte ECDSA-Signatur (P-384)
 - Fehler einbauen für Negativtests (Summen, Zeilen, CRLF, Steuersatz-Format, ECC M)
 - Scanmodus: Code groß auf dem Bildschirm (kleinere Codes proportional kleiner), Pfeiltasten für Teilcodes, Leertaste für den nächsten Bon, N für gleichen Einkauf mit neuer Bon-Nr.
@@ -21,7 +21,7 @@ Alle erzeugten Belege sind Testdaten mit fiktiven Händlerangaben, tragen den Au
 **Rückprüfung**
 - Codes per Kamera, Foto/Screenshot (auch Drag & Drop und Strg+V) oder als Text einlesen
 - Codes eines Bons werden zusammengeführt (1/3, 2/3 …) und gemeinsam geprüft
-- Feldprüfung mit den regulären Ausdrücken der Spezifikation, Summenkontrolle, Hinweis bei anderer Fehlerkorrektur als Q
+- Feldprüfung mit den regulären Ausdrücken der jeweiligen Fassung (in der Rückprüfung automatisch erkannt, auch die Zeichenkodierung), Summenkontrolle, Hinweis bei anderer Fehlerkorrektur als Q
 - Fehler, wenn verschiedene gescannte Bons dieselbe BON_NR tragen
 
 ## Entwicklung
@@ -50,6 +50,6 @@ docs/        Plan, Auswertung der Spezifikation, Rückfragen an den Autor (nur a
 
 ## Veröffentlichung
 
-`.github/workflows/pages.yml` baut bei jedem Push auf `main` und veröffentlicht `dist/` auf GitHub Pages. Einmalig in den Repository-Einstellungen unter *Settings → Pages → Source* „GitHub Actions“ wählen.
+`.github/workflows/pages.yml` baut bei jedem Push auf `main` oder den Testbranch beide Stände: `main` an der Wurzel der Site, den Testbranch mit `VITE_CHANNEL=test` (Hinweis „Testversion“) unter `/test/`. Damit der Testbranch veröffentlichen darf, muss er unter *Settings → Environments → github-pages* als Deployment-Branch erlaubt sein. Einmalig in den Repository-Einstellungen unter *Settings → Pages → Source* „GitHub Actions“ wählen.
 
 Details zur Spezifikation und zu ihren Unstimmigkeiten: [`docs/PLAN.md`](docs/PLAN.md).

@@ -1,5 +1,5 @@
 import { useEffect, useState, type Dispatch } from 'react';
-import { QR_CAPACITY_Q_BYTES, SCENARIOS, euro, newSeed, parseDecimal, positionGross, randomPosition, type Faults, type Position } from '../dakz';
+import { QR_CAPACITY_Q_BYTES, SCENARIOS, SPECS, charsetLabel, otherCharset, euro, newSeed, parseDecimal, positionGross, randomPosition, type Faults, type Position } from '../dakz';
 import { BonNumberField } from './BonNumberField';
 import { SavedBons } from './SavedBons';
 import type { Action, AppState } from './state';
@@ -57,6 +57,7 @@ interface EditorProps {
 
 export function Editor({ state, dispatch, counter, actions, saved, notify }: EditorProps) {
   const { receipt, merchant, options } = state;
+  const profile = SPECS[state.spec];
   const setPositions = (positions: Position[]) => dispatch({ type: 'receipt', patch: { positions } });
   const updatePos = (i: number, patch: Partial<Position>) => setPositions(receipt.positions.map((p, j) => (j === i ? { ...p, ...patch } : p)));
   const gross = receipt.positions.reduce((a, p) => a + positionGross(p), 0);
@@ -99,7 +100,7 @@ export function Editor({ state, dispatch, counter, actions, saved, notify }: Edi
             <input id="merchant-address" value={merchant.address} onChange={(e) => dispatch({ type: 'merchant', patch: { address: e.target.value } })} />
           </label>
           <label className="field">
-            Externe Referenz (E6)
+            Externe Referenz ({profile.tse ? 'E6' : 'E4'})
             <input id="external-ref" value={receipt.externalRef} onChange={(e) => dispatch({ type: 'receipt', patch: { externalRef: e.target.value } })} />
           </label>
           <label className="field">
@@ -205,7 +206,10 @@ export function Editor({ state, dispatch, counter, actions, saved, notify }: Edi
 
       <div className="section">
         <h3>
-          QR-Erzeugung <small>Fehlerkorrektur Q, Byte-Modus UTF-8</small>
+          QR-Erzeugung{' '}
+          <small>
+            Spezifikation {state.spec} · Fehlerkorrektur Q · Byte-Modus {profile.charsetLabel}
+          </small>
         </h3>
         <div className="grid2">
           <label className="field">
@@ -227,15 +231,27 @@ export function Editor({ state, dispatch, counter, actions, saved, notify }: Edi
               <option value="fixed">19,00 (wie Feldbeispiel)</option>
             </select>
           </label>
-          <label className="field">
-            TSE-Daten
+          <label className="field" title={profile.tse ? undefined : 'Ab 1.3 stehen keine TSE-Daten im QR-Code, nur noch auf dem Bon'}>
+            TSE-Daten{profile.tse ? ' (E4/E5)' : ' (nur Bon)'}
             <select id="tse-mode" value={state.tseMode} onChange={(e) => dispatch({ type: 'tseMode', value: e.target.value as 'random' | 'ecdsa' })}>
               <option value="random">Zufällig (Base64)</option>
               <option value="ecdsa">Echte ECDSA-Signatur (P-384)</option>
             </select>
           </label>
         </div>
-        <p className="hint">Höchstens {QR_CAPACITY_Q_BYTES.toLocaleString('de-DE')} Byte (Version 40, Q). Kleinere Werte erzwingen die Aufteilung auf mehrere Codes.</p>
+        <p className="hint">
+          Höchstens {QR_CAPACITY_Q_BYTES.toLocaleString('de-DE')} Byte (Version 40, Q)
+          {profile.charset === 'iso-8859-1' ? ', in ISO 8859-1 also 1.663 Zeichen' : ''}. Kleinere Werte erzwingen die Aufteilung auf mehrere Codes.
+          {profile.tse ? '' : ' TSE-Daten stehen ab 1.3 nicht mehr im QR-Code, der Bon druckt sie weiterhin.'}
+        </p>
+        {profile.versionField && (
+          <label className="check">
+            <input type="checkbox" checked={options.writeVersion} onChange={(e) => dispatch({ type: 'options', patch: { writeVersion: e.target.checked } })} />
+            <span>
+              K8 Versionsnummer „{state.spec}“ schreiben<small>optional, am Ende der K-Zeile; ohne K8 erkennt ein Leser die Fassung nur an der E-Zeile</small>
+            </span>
+          </label>
+        )}
         <label className="check">
           <input type="checkbox" checked={options.trailingLF} onChange={(e) => dispatch({ type: 'options', patch: { trailingLF: e.target.checked } })} />
           <span>
@@ -266,6 +282,14 @@ export function Editor({ state, dispatch, counter, actions, saved, notify }: Edi
               {f.label}
             </button>
           ))}
+          <button
+            className="chip fault"
+            title={`Mit ${charsetLabel(otherCharset(profile.charset))} statt ${profile.charsetLabel} kodieren${state.spec === '1.3' ? ' – so wie die Beispielcodes in Fassung 1.3' : ''}`}
+            aria-pressed={!!options.faults.wrongCharset}
+            onClick={() => dispatch({ type: 'fault', key: 'wrongCharset', on: !options.faults.wrongCharset })}
+          >
+            {charsetLabel(otherCharset(profile.charset))} statt {profile.charsetLabel}
+          </button>
           <button className="chip fault" title="Mit Fehlerkorrektur M statt Q kodieren, wie in den Zoll-Beispielen" aria-pressed={state.eccOverride === 'M'} onClick={() => dispatch({ type: 'ecc', value: state.eccOverride ? null : 'M' })}>
             ECC M statt Q
           </button>

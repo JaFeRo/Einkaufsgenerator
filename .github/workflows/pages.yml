@@ -1,8 +1,11 @@
 name: GitHub Pages
 
+# Eine Pages-Site je Repository: main liegt an der Wurzel, der Testbranch unter /test/.
+# Jeder Lauf baut beide Stände, damit keiner den anderen überschreibt.
+
 on:
   push:
-    branches: [main]
+    branches: [main, claude/planning-session-80jn4y]
   workflow_dispatch:
 
 permissions:
@@ -14,22 +17,52 @@ concurrency:
   group: pages
   cancel-in-progress: true
 
+env:
+  TEST_BRANCH: claude/planning-session-80jn4y
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TEST_BRANCH }}
+          path: test
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npm test
-      - run: npm run build
+          cache-dependency-path: |
+            main/package-lock.json
+            test/package-lock.json
+      - name: Build main
+        working-directory: main
+        run: |
+          npm ci
+          npm test
+          npm run build
+      - name: Build Testversion
+        working-directory: test
+        env:
+          VITE_CHANNEL: test
+        run: |
+          npm ci
+          npm test
+          npm run build
+      - name: Zusammenführen
+        run: |
+          mkdir site
+          cp -r main/dist/. site/
+          mkdir site/test
+          cp -r test/dist/. site/test/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: site
 
   deploy:
     needs: build

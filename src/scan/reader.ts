@@ -1,3 +1,4 @@
+import { decodeBytes, type Charset } from '../dakz/spec';
 import { prepareZXingModule, readBarcodes, type ReadResult } from 'zxing-wasm/reader';
 import wasmUrl from 'zxing-wasm/reader/zxing_reader.wasm?url';
 
@@ -7,26 +8,19 @@ prepareZXingModule({
 });
 
 export interface ScannedCode {
-  /** Inhalt, als UTF-8 dekodiert */
+  /** Inhalt, in der erkannten Kodierung dekodiert */
   text: string;
-  /** Rohbytes des Byte-Segments */
-  bytes: Uint8Array;
-  utf8Valid: boolean;
+  /** Kodierung der Rohbytes (UTF-8 nur bei gültigen Mehrbytefolgen, sonst ISO 8859-1) */
+  detected: Charset | 'ascii';
   ecLevel: string;
   version: string;
   source: string;
 }
 
 function toScanned(r: ReadResult, source: string): ScannedCode {
-  let text: string;
-  let utf8Valid = true;
-  try {
-    text = new TextDecoder('utf-8', { fatal: true }).decode(r.bytes);
-  } catch {
-    utf8Valid = false;
-    text = r.text;
-  }
-  return { text, bytes: r.bytes, utf8Valid, ecLevel: r.ecLevel, version: r.version, source };
+  // Selbst dekodieren: zxing rät die Kodierung ohne ECI und kann ISO 8859-1 als anderes Charset lesen.
+  const { text, detected } = decodeBytes(r.bytes);
+  return { text, detected, ecLevel: r.ecLevel, version: r.version, source };
 }
 
 export async function scanImage(input: Blob | ImageData, source: string, thorough = true): Promise<ScannedCode[]> {

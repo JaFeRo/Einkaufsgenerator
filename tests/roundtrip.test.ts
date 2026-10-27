@@ -13,8 +13,8 @@ beforeAll(async () => {
   await prepareZXingModule({ overrides: { wasmBinary: bin.buffer.slice(bin.byteOffset, bin.byteOffset + bin.byteLength) }, fireImmediately: true });
 });
 
-async function decode(text: string) {
-  const img = matrixToRgba(encodeQr(text, 'Q'), 3);
+async function decode(text: string, charset: 'utf-8' | 'iso-8859-1' = 'utf-8') {
+  const img = matrixToRgba(encodeQr(text, 'Q', charset), 3);
   const [result] = await readBarcodes(img as unknown as ImageData, { formats: ['QRCode'], tryHarder: false });
   return result;
 }
@@ -22,11 +22,14 @@ async function decode(text: string) {
 describe('QR-Rundlauf (erzeugen → dekodieren)', () => {
   for (const id of ['zoll61', 'special', 'kg', 'overflow']) {
     it(id, async () => {
-      const { codes } = generate(SCENARIOS.find((s) => s.id === id)!.build(11));
-      for (const c of codes) {
-        const r = await decode(c.text);
-        expect(r?.text).toBe(c.text);
-        expect(r?.ecLevel).toBe('Q');
+      for (const spec of ['1.2', '1.3'] as const) {
+        const { codes } = generate(SCENARIOS.find((s) => s.id === id)!.build(11), { spec });
+        for (const c of codes) {
+          const r = await decode(c.text, c.charset);
+          // Bytes vergleichen: 1.2 schreibt UTF-8, 1.3 ISO 8859-1
+          expect(Array.from(r!.bytes), `${id} ${spec}`).toEqual(Array.from(c.data));
+          expect(r?.ecLevel).toBe('Q');
+        }
       }
     });
   }

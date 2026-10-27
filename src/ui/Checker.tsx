@@ -1,14 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { formatEpoch, parseContent, validateCode, validateSet, type CodeCheck, type Finding } from '../dakz';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { decodeBytes, detectSpec, fieldSpecs, formatEpoch, parseContent, SPECS, validateCode, validateSet, type Finding, type SpecVersion } from '../dakz';
 import examples from '../dakz/zoll-beispiele.json';
+import examples13 from '../dakz/zoll-beispiele-13.json';
 import type { ScannedCode } from '../scan/reader';
 import { CsvView, Findings, StatusPill } from './Findings';
 
+/** Eingelesener Code; bei eingetipptem Text ist die Kodierung unbekannt. */
+type Scanned = Omit<ScannedCode, 'detected'> & { detected?: ScannedCode['detected'] };
+
 interface Entry {
   id: number;
-  scanned: Omit<ScannedCode, 'bytes'>;
-  check: CodeCheck;
+  scanned: Scanned;
 }
+
+type SpecMode = 'auto' | 'selected';
 
 interface BonGroup {
   key: string;
@@ -20,8 +25,10 @@ const loadReader = () => import('../scan/reader');
 
 let nextId = 1;
 
+const fromBase64 = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+
 function groupKey(entry: Entry): string {
-  const k = entry.check.records[0];
+  const k = parseContent(entry.scanned.text)[0];
   return k?.[0] === 'K' ? [k[3], k[4], k[5], k[6]].join('|') : `ungueltig-${entry.id}`;
 }
 
@@ -41,8 +48,9 @@ function beep() {
   }
 }
 
-export function Checker({ notify }: { notify: (m: string) => void }) {
+export function Checker({ notify, spec }: { notify: (m: string) => void; spec: SpecVersion }) {
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [mode, setMode] = useState<SpecMode>('auto');
   const [text, setText] = useState('');
   const [camera, setCamera] = useState<'off' | 'starting' | 'on'>('off');
   const [camError, setCamError] = useState<string | null>(null);
@@ -52,14 +60,14 @@ export function Checker({ notify }: { notify: (m: string) => void }) {
   const streamRef = useRef<MediaStream | null>(null);
   const seen = useRef(new Set<string>());
 
-  const add = useCallback((codes: Omit<ScannedCode, 'bytes'>[], quiet = false) => {
+  const add = useCallback((codes: Scanned[], quiet = false) => {
     const fresh = codes.filter((c) => !seen.current.has(c.text));
     if (!fresh.length) {
       if (codes.length && !quiet) notify('Bereits erfasst');
       return 0;
     }
     fresh.forEach((c) => seen.current.add(c.text));
-    setEntries((list) => [...list, ...fresh.map((scanned) => ({ id: nextId++, scanned, check: validateCode(scanned.text) }))]);
+    setEntries((list) => [...list, ...fresh.map((scanned) => ({ id: nextId++, scanned }))]);
     return fresh.length;
   }, [notify]);
 
@@ -157,14 +165,25 @@ export function Checker({ notify }: { notify: (m: string) => void }) {
     if (!t.trim()) return;
     // Mehrere Codes lassen sich durch eine Leerzeile getrennt einfügen.
     const parts = t.split(/\n\s*\n(?=K;)/).map((p, i, arr) => (i < arr.length - 1 ? p + '\n' : p));
-    add(parts.map((p) => ({ text: p, utf8Valid: true, ecLevel: '', version: '', source: 'Text' })));
+    add(parts.map((p) => ({ text: p, ecLevel: '', version: '', source: 'Text' })));
     setText('');
   };
 
   const loadExamples = () => {
     add(
-      [examples.ex61, examples.ex62, examples.ex63a].map((t, i) => ({ text: t, utf8Valid: true, ecLevel: ['L', 'L', 'M'][i], version: '', source: `Zoll-Beispiel ${['6.1', '6.2', '6.3 (1/2)'][i]}` }))
+      [examples.ex61, examples.ex62, examples.ex63a].map((t, i) => ({ text: t, detected: 'utf-8' as const, ecLevel: ['L', 'L', 'M'][i], version: '', source: `Zoll-Beispiel 1.2 · ${['6.1', '6.2', '6.3 (1/2)'][i]}` }))
     );
+  };
+
+  // Die QR-Codes der Fassung 1.3 als Rohbytes, so wie sie im Dokument abgebildet sind (Abb. 4 ist nur der Text zu Abb. 5).
+  const loadExamples13 = () => {
+    const raw: [string, Uint8Array][] = [
+      ['Abb. 5 (6.1)', fromBase64(examples13.abb5)],
+      ['Abb. 7', fromBase64(examples13.abb7)],
+      ['Abb. 9 (1/2)', fromBase64(examples13.abb9)],
+      ['Abb. 11 (2/2)', fromBase64(examples13.abb11)]
+    ];
+    add(raw.map(([name, bytes]) => ({ ...decodeBytes(bytes), ecLevel: '', version: '', source: `Zoll-Beispiel 1.3 · ${name}` })));
   };
 
   const clear = () => {
@@ -243,7 +262,10 @@ export function Checker({ notify }: { notify: (m: string) => void }) {
               Prüfen
             </button>
             <button className="btn" onClick={loadExamples}>
-              Zoll-Beispiele laden
+              Zoll-Beispiele 1.2
+            </button>
+            <button className="btn" onClick={loadExamples13}>
+              Zoll-Beispiele 1.3
             </button>
             {entries.length > 0 && (
               <button className="btn" onClick={clear}>
@@ -252,6 +274,25 @@ export function Checker({ notify }: { notify: (m: string) => void }) {
             )}
           </div>
           <p className="hint">Mehrere Codes durch eine Leerzeile trennen. Gleiche Inhalte werden nur einmal erfasst.</p>
+        </div>
+
+        <div className="section">
+          <h3>
+            Prüfen nach <small>Fassung der Spezifikation</small>
+          </h3>
+          <div className="seg" role="radiogroup" aria-label="Prüfen nach">
+            <button role="radio" aria-checked={mode === 'auto'} aria-selected={mode === 'auto'} onClick={() => setMode('auto')}>
+              Automatisch erkennen
+            </button>
+            <button role="radio" aria-checked={mode === 'selected'} aria-selected={mode === 'selected'} onClick={() => setMode('selected')}>
+              Immer {spec}
+            </button>
+          </div>
+          <p className="hint">
+            {mode === 'auto'
+              ? `Die Fassung wird je Bon aus K8 oder der Feldzahl der E-Zeile erkannt. Folgecodes ohne K8 und eingetippter Text ohne Hinweis werden nach ${spec} geprüft (oben gewählt).`
+              : `Alle Codes werden nach Fassung ${spec} geprüft, auch wenn sie nach einer anderen Fassung erzeugt wurden.`}
+          </p>
         </div>
       </section>
 
@@ -262,26 +303,41 @@ export function Checker({ notify }: { notify: (m: string) => void }) {
             Kamera starten, ein Foto hochladen oder Text einfügen. Codes eines Bons werden automatisch zusammengeführt und gemeinsam geprüft.
             <div className="row" style={{ justifyContent: 'center', marginTop: 12 }}>
               <button className="btn" onClick={loadExamples}>
-                Zoll-Beispiele laden
+                Zoll-Beispiele 1.2
+              </button>
+              <button className="btn" onClick={loadExamples13}>
+                Zoll-Beispiele 1.3
               </button>
             </div>
           </section>
         )}
         {groups.map((g) => (
-          <BonCard key={g.key} group={g} sameBonNr={groups.filter((o) => o !== g && o.key.split('|')[0] === g.key.split('|')[0] && !o.key.startsWith('ungueltig')).length} />
+          <BonCard key={g.key} group={g} selected={spec} mode={mode} sameBonNr={groups.filter((o) => o !== g && o.key.split('|')[0] === g.key.split('|')[0] && !o.key.startsWith('ungueltig')).length} />
         ))}
       </div>
     </main>
   );
 }
 
-function BonCard({ group, sameBonNr }: { group: BonGroup; sameBonNr: number }) {
-  const entries = [...group.entries].sort((a, b) => +(a.check.records[0]?.[1] ?? 0) - +(b.check.records[0]?.[1] ?? 0));
+function BonCard({ group, sameBonNr, selected, mode }: { group: BonGroup; sameBonNr: number; selected: SpecVersion; mode: SpecMode }) {
   const [open, setOpen] = useState<number | null>(null);
+  // Fassung je Bon: erste eindeutige Angabe (K8 oder E-Zeile) gilt auch für die Folgecodes.
+  const detections = group.entries.map((e) => detectSpec(parseContent(e.scanned.text)));
+  const found = detections.find((d) => d.version);
+  const spec: SpecVersion = mode === 'auto' ? found?.version ?? selected : selected;
+  const specNote = mode === 'selected' ? 'fest gewählt' : found ? `erkannt: ${found.reason}` : 'keine Angabe im Code, gewählte Fassung';
+  const versions = new Set(detections.map((d) => d.version).filter(Boolean));
+
+  const entries = group.entries
+    .map((e) => ({ ...e, check: validateCode(e.scanned.text, { spec, detectedCharset: e.scanned.detected }) }))
+    .sort((a, b) => +(a.check.records[0]?.[1] ?? 0) - +(b.check.records[0]?.[1] ?? 0));
   const set = validateSet(entries.map((e) => e.scanned.text));
   const k = entries[0].check.records[0]?.[0] === 'K' ? entries[0].check.records[0] : undefined;
 
   const findings: (Finding & { prefix?: string })[] = [...set.findings];
+  if (versions.size > 1) findings.push({ severity: 'error', ref: 'K8', message: 'Die Codes dieses Bons gehören zu verschiedenen Fassungen' });
+  if (mode === 'auto' && found?.version && found.version !== selected)
+    findings.push({ severity: 'warning', message: `Code entspricht Fassung ${found.version}, oben gewählt ist ${selected}` });
   if (sameBonNr > 0)
     findings.push({
       severity: 'error',
@@ -293,8 +349,7 @@ function BonCard({ group, sameBonNr }: { group: BonGroup; sameBonNr: number }) {
     const prefix = set.expected > 1 && nr ? `QR ${nr}` : undefined;
     e.check.findings.forEach((f) => findings.push({ ...f, prefix }));
     if (e.scanned.ecLevel && e.scanned.ecLevel !== 'Q')
-      findings.push({ severity: 'warning', ref: 'V4', prefix, message: `Fehlerkorrektur ${e.scanned.ecLevel}, verlangt ist Q` });
-    if (!e.scanned.utf8Valid) findings.push({ severity: 'error', ref: 'C2', prefix, message: 'Inhalt ist kein gültiges UTF-8' });
+      findings.push({ severity: 'warning', ref: 'V4', prefix, message: `Fehlerkorrektur ${e.scanned.ecLevel}, ${spec === '1.3' ? 'empfohlen' : 'verlangt'} ist Q` });
   }
   const errors = findings.filter((f) => f.severity === 'error').length;
   const warnings = findings.length - errors;
@@ -310,6 +365,9 @@ function BonCard({ group, sameBonNr }: { group: BonGroup; sameBonNr: number }) {
         <h3>{k ? `Bon ${k[3]}` : 'Unbekannter Inhalt'}</h3>
         <StatusPill errors={errors} warnings={warnings} okText={set.complete ? 'Vollständig & konform' : 'Konform'} />
         {k && <span className="meta">{k[6]} € · {/^\d{10}$/.test(k[4]) ? formatEpoch(+k[4], true) + ' UTC' : k[4]}</span>}
+        <span className="meta" title={specNote}>
+          Spezifikation {spec} · {SPECS[spec].charsetLabel} · {specNote}
+        </span>
         <div className="parts" aria-label="Teilcodes" style={{ marginLeft: 'auto' }}>
           {Array.from({ length: set.expected }, (_, i) => (
             <span key={i} className={set.present.includes(i + 1) ? 'have' : ''}>
@@ -367,15 +425,15 @@ function BonCard({ group, sameBonNr }: { group: BonGroup; sameBonNr: number }) {
           </div>
           {eRow && (
             <dl className="fields">
-              <dt>E4</dt>
-              <dd className="nm">TSE_TA_SIG</dd>
-              <dd>{eRow[3]}</dd>
-              <dt>E5</dt>
-              <dd className="nm">TSE_PUBLIC_KEY</dd>
-              <dd>{eRow[4]}</dd>
-              <dt>E6</dt>
-              <dd className="nm">Referenz</dd>
-              <dd>{eRow[5] || '–'}</dd>
+              {fieldSpecs(spec)
+                .E.slice(2)
+                .map((fs, i) => (
+                  <Fragment key={fs.id}>
+                    <dt>{fs.id}</dt>
+                    <dd className="nm">{fs.name}</dd>
+                    <dd>{eRow[3 + i] || '–'}</dd>
+                  </Fragment>
+                ))}
             </dl>
           )}
         </div>
@@ -420,7 +478,7 @@ function BonCard({ group, sameBonNr }: { group: BonGroup; sameBonNr: number }) {
         <div className="seg">
           {entries.map((e, i) => (
             <button key={e.id} aria-selected={open === i} onClick={() => setOpen(open === i ? null : i)}>
-              QR {e.check.records[0]?.[1] ?? '?'} · {e.check.bytes} Byte{e.scanned.ecLevel ? ` · ECC ${e.scanned.ecLevel}` : ''}
+              QR {e.check.records[0]?.[1] ?? '?'} · {e.check.bytes} Byte{e.scanned.detected && e.scanned.detected !== 'ascii' ? ` · ${e.scanned.detected === 'utf-8' ? 'UTF-8' : 'ISO 8859-1'}` : ''}{e.scanned.ecLevel ? ` · ECC ${e.scanned.ecLevel}` : ''}
               {e.scanned.version ? ` · V${e.scanned.version}` : ''} · {e.scanned.source}
             </button>
           ))}

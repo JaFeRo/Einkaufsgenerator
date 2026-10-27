@@ -1,4 +1,4 @@
-import { euro, formatEpoch, formatQty, money, positionGross, type Merchant, type Receipt as ReceiptData } from '../dakz';
+import { SPECS, euro, formatEpoch, formatQty, money, positionGross, type Merchant, type Receipt as ReceiptData } from '../dakz';
 import type { CSSProperties } from 'react';
 import { fmtDots, fmtMm, printableMm, qrLayout, type ModuleDots } from '../qr/layout';
 import { QrSvg } from './QrSvg';
@@ -74,13 +74,13 @@ export function Receipt({ receipt, merchant, bon, paper, moduleDots }: Props) {
       </div>
       <div>{formatEpoch(receipt.start, false)}</div>
       <div className="rule" />
-      <div>TSE Start: {formatEpoch(receipt.start, true)}</div>
-      <div>TSE Ende:  {formatEpoch(receipt.end, true)}</div>
+      <div>TSE Start: {formatEpoch(receipt.start, true)} UTC</div>
+      <div>TSE Ende:  {formatEpoch(receipt.end, true)} UTC</div>
       <div>TSE-Signatur:</div>
       <div className="sig">{receipt.tseSignature}</div>
       <div className="rule" />
       <div className="c b">Digitaler Ausfuhrkassenzettel</div>
-      <div className="c small">Einkaufsdaten für dAKZ – mit der eZOLL-App scannen</div>
+      <div className="c small">Einkaufsdaten für dAKZ – mit der {SPECS[bon.spec].appName} scannen</div>
       {bon.codes.map((c) => {
         const layout = c.matrix ? qrLayout(c.matrix.size, moduleDots, paper) : null;
         return (
