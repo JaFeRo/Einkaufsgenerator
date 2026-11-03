@@ -84,11 +84,12 @@ describe('Fassung 1.3: Prüfung der Dokument-Beispiele', () => {
     return validateCode(d.text, { spec: '1.3', detectedCharset: d.detected });
   };
 
-  it('alle Beispielcodes sind UTF-8 statt ISO 8859-1, aber mit LF', () => {
+  it('alle Beispielcodes sind UTF-8 statt ISO 8859-1 (Warnung, die App liest beides), aber fehlerfrei mit LF', () => {
     for (const k of ['abb5', 'abb7', 'abb9'] as const) {
       expect(read(k).detected, k).toBe('utf-8');
       expect(read(k).text, k).not.toContain('\r');
-      expect(refs(check(k), 'error'), k).toEqual(['V3/C2']);
+      expect(refs(check(k), 'error'), k).toEqual([]);
+      expect(refs(check(k), 'warning'), k).toContain('V3/C2');
     }
   });
 

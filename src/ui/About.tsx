@@ -41,62 +41,88 @@ export function About({ spec }: { spec: SpecVersion }) {
             <thead>
               <tr>
                 <th></th>
-                <th>1.2 (01.09.2026)</th>
-                <th>1.3 (26.10.2026, vorgelegt)</th>
+                <th>1.2</th>
+                <th>1.3</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td>Zeichenkodierung (V3, C1, C2)</td>
-                <td>UTF-8</td>
-                <td>ISO 8859-1 – Zeichen wie „€“, „–“ oder typografische Anführungszeichen fehlen und werden durch „?“ ersetzt</td>
+                <td>Stand</td>
+                <td>Version 1.2 vom 01.09.2026, abgelöst</td>
+                <td>Version 1.3 vom 26.10.2026, aktuell auf zoll.de</td>
               </tr>
               <tr>
-                <td>E-Zeile</td>
-                <td>E2 Netto, E3 MwSt, E4 TSE-Signatur, E5 öffentlicher Schlüssel (Pflicht), E6 Referenz</td>
-                <td>E2 Netto, E3 MwSt, E4 RESERVED1 = „-1“, E5 RESERVED2 = „-1“ (Pflicht), E6 Referenz – keine TSE-Daten mehr im Code, Feldreihenfolge unverändert</td>
+                <td>QR-Codierung (V3)</td>
+                <td>„Alphanumerisch, UTF-8“ – mit dem Inhalt nur im Byte-Modus umsetzbar</td>
+                <td>Byte-Modus, ISO 8859-1</td>
+              </tr>
+              <tr>
+                <td>Zeichensatz (C1, C2)</td>
+                <td>UTF-8</td>
+                <td>ISO 8859-1 – „€“, „–“ und typografische Anführungszeichen sind nicht darstellbar (der Simulator ersetzt sie durch „?“)</td>
+              </tr>
+              <tr>
+                <td>Kapazität (V4, Kap. 5)</td>
+                <td>2.420 Zeichen, Fehlerkorrektur Q</td>
+                <td>1.663 Zeichen, Q empfohlen, wird nicht geprüft</td>
+              </tr>
+              <tr>
+                <td>E4, E5</td>
+                <td>TSE_TA_SIG und TSE_PUBLIC_KEY, Base64 bis 512 Zeichen, Pflicht</td>
+                <td>RESERVED1 und RESERVED2, Pflicht, genau „-1“ – keine TSE-Daten mehr im Code</td>
+              </tr>
+              <tr>
+                <td>E6</td>
+                <td>externeKundenReferenz, optional</td>
+                <td>unverändert</td>
               </tr>
               <tr>
                 <td>Versionsangabe im Code</td>
                 <td>keine</td>
-                <td>keine – erkennbar nur an E4/E5</td>
+                <td>keine – die Fassung ist nur an E4/E5 erkennbar</td>
               </tr>
               <tr>
-                <td>Kapazität (V4, Kap. 5)</td>
-                <td>2.420 Zeichen, ECC Q verlangt</td>
-                <td>1.663 Zeichen, ECC Q empfohlen</td>
+                <td>Duplikatsprüfung (Kap. 2.1)</td>
+                <td>BON_NR, Unternehmen, Zeitstempel, sofern belegt TSE-Felder</td>
+                <td>BON_NR, Unternehmen, Zeitstempel, daP</td>
+              </tr>
+              <tr>
+                <td>P2, M2 Steuersatz</td>
+                <td>Regex mit Leerzeichen: <code>{'^\\d{1,2} (,\\d{1,2})?$'}</code></td>
+                <td>Leerzeichen entfernt: <code>{'^\\d{1,2}(,\\d{1,2})?$'}</code></td>
               </tr>
               <tr>
                 <td>P4 Positionsbrutto</td>
-                <td>Regex lässt bis ±50.000,99 zu</td>
-                <td>
-                  <code>^(?!-?0\d)(-?[1-4]?\d{'{1,4}'},\d{'{2}'}|-?50000|0)$</code> – ±50000 und 0 ohne Nachkommastellen
-                </td>
+                <td><code>{'^(-?[1-4]?\\d{1,4}|-?50000|0),\\d{2}$'}</code> – lässt bis ±50.000,99 zu</td>
+                <td><code>{'^(?!-?0\\d)(-?[1-4]?\\d{1,4},\\d{2}|-?50000|0)$'}</code> – ±50000 und 0 nur ohne Nachkommastellen, 50000,00 wird abgelehnt</td>
               </tr>
               <tr>
                 <td>M3–M5</td>
-                <td>Regex aus 1.2</td>
-                <td>
-                  <code>^(?!-?0\d)(-?[0-4]?\d{'{1,7}'}),\d{'{2}'}$</code>, negative Werte erlaubt
-                </td>
+                <td><code>{'^-?([0-4]?\\d{1,7}),\\d{2}$'}</code> – führende Nullen möglich</td>
+                <td><code>{'^(?!-?0\\d)(-?[0-4]?\\d{1,7}),\\d{2}$'}</code> – ohne führende Nullen</td>
               </tr>
               <tr>
-                <td>P2/M2 Steuersatz</td>
-                <td>Regex mit Leerzeichen</td>
-                <td>Leerzeichen entfernt</td>
+                <td>Feldbeschreibungen</td>
+                <td>K4 „1 bis 13 Ziffern“ (Regex: 12); P5 ohne Standardwert</td>
+                <td>K4 „1 bis 12 Ziffern (sowie 10¹²)“; K7 „echt größer 50“ über alle Positionen; P5 Standard 1; M5 = M3 − M4</td>
+              </tr>
+              <tr>
+                <td>Zeilentypen (Kap. 3.2)</td>
+                <td>alle vier mandatorisch</td>
+                <td>Folgecodes (nur K und P) als Ausnahme genannt</td>
               </tr>
               <tr>
                 <td>Beispiele (Kap. 6)</td>
-                <td>6.1, 6.2, 6.3</td>
-                <td>6.1 und 6.2 (Überlauf, früher 6.3); Zeilenende LF, aber weiterhin UTF-8; 6.1 mit Fehlerkorrektur M</td>
+                <td>6.1, 6.2 (5 Steuersätze), 6.3 (Überlauf); Fehlerkorrektur L bzw. M</td>
+                <td>6.1 und 6.2 (Überlauf, früher 6.3) mit „-1“ in E4/E5; Zeilenende LF; weiterhin UTF-8; 6.1 mit Fehlerkorrektur M, 6.2 mit Q</td>
               </tr>
             </tbody>
           </table>
         </div>
         <p className="hint">
-          Die Rückprüfung erkennt die Fassung je Bon an E4/E5 und die Kodierung an den Rohbytes. Unter „Fehler einbauen“ lässt sich ein Bon absichtlich in der
-          falschen Kodierung erzeugen. Nach Kap. 1.4 (Toleranzprinzip) müssen Leser unbekannte zusätzliche Felder am Zeilenende ignorieren; der Prüfer meldet sie
-          nur als Warnung.
+          Die Rückprüfung erkennt die Fassung je Bon an E4/E5 und die Kodierung an den Rohbytes. Weicht die Kodierung von der Fassung ab, meldet sie eine Warnung:
+          Die App liest UTF-8 und ISO 8859-1. Ein 1.3-Code erfüllt auch die Feldregeln von 1.2 („-1“ passt auf die TSE-Regex), ein 1.2-Code fällt unter 1.3 an
+          E4/E5 durch. Nach Kap. 1.4 (Toleranzprinzip) müssen Leser unbekannte zusätzliche Felder am Zeilenende ignorieren; der Prüfer meldet sie nur als Warnung.
         </p>
       </section>
       <section className="panel">
@@ -129,11 +155,15 @@ export function About({ spec }: { spec: SpecVersion }) {
             </>
           )}
           <li>
-            <b>Summen:</b> Konsistenzregeln stehen nicht in der Spezifikation. Abweichungen zwischen K7, E2, E3, M- und P-Zeilen meldet der Prüfer als Warnung.
-            Die Zoll-Beispiele 6.2 und 6.3 lösen solche Warnungen selbst aus.
+            <b>Zeichenkodierung:</b> Erzeugt wird in der Kodierung der Fassung ({p.charsetLabel}). Die App liest UTF-8 und ISO 8859-1, eine abweichende Kodierung
+            meldet der Prüfer daher als Warnung, nicht als Fehler.
           </li>
           <li>
-            <b>TSE:</b> {is13 ? 'Ab 1.3 nicht mehr im Code, steht aber weiter auf dem Bon. ' : ''}Wahlweise zufällige Base64-Werte oder eine echte ECDSA-Signatur
+            <b>Summen:</b> Konsistenzregeln stehen nicht in der Spezifikation. Abweichungen zwischen K7, E2, E3, M- und P-Zeilen meldet der Prüfer als Warnung.
+            {is13 ? 'Das Zoll-Beispiel 6.2 löst' : 'Die Zoll-Beispiele 6.2 und 6.3 lösen'} solche Warnungen selbst aus.
+          </li>
+          <li>
+            <b>TSE:</b> {is13 ? 'Ab 1.3 steht in E4/E5 nur „-1“, die TSE-Daten druckt der Bon weiterhin. ' : ''}Wahlweise zufällige Base64-Werte oder eine echte ECDSA-Signatur
             (P-384) mit einem Sitzungsschlüssel. Beides ist kein zertifiziertes TSE-Format.
           </li>
         </ul>
@@ -143,7 +173,7 @@ export function About({ spec }: { spec: SpecVersion }) {
         <ul>
           <li>Scanmodus: Code bildschirmfüllend, Pfeiltasten wechseln Teilcodes, Leertaste erzeugt den nächsten Bon, N den gleichen Einkauf mit neuer Bon-Nr.</li>
           <li>
-            Das dAKZ-Backend erkennt Duplikate über BON_NR, Unternehmen und Zeitstempel. Jeder neue Bon bekommt deshalb die nächste freie Nummer vom Zähler. Der
+            Das dAKZ-Backend erkennt Duplikate über BON_NR, Unternehmen und Zeitstempel{is13 ? ' sowie die daP' : ''}. Jeder neue Bon bekommt deshalb die nächste freie Nummer vom Zähler. Der
             Zähler liegt im Browser; testen mehrere Personen, sollte jede einen eigenen Startbereich wählen.
           </li>
           <li>Eigene Bons speichern Positionen, Händler, Optionen und eingebaute Fehler. Beim Laden gibt es eine neue Bon-Nr. und die aktuelle Uhrzeit.</li>

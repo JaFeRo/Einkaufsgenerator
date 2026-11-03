@@ -161,7 +161,8 @@ export function validateCode(text: string, opts: ValidateOptions = {}): CodeChec
   if (text.length > profile.maxChars) err(`Mehr als ${profile.maxChars.toLocaleString('de-DE')} Zeichen in einem Code`, 'Kap. 5');
   if (text.length && !text.endsWith('\n')) warn('Letzte Zeile endet ohne LF (EBNF verlangt LF je record)', 'EBNF');
   if (d && d !== 'ascii' && d !== profile.charset)
-    err(`Zeichenkodierung ${d === 'utf-8' ? 'UTF-8' : 'ISO 8859-1'}, Spezifikation ${spec} verlangt ${profile.charsetLabel}`, spec === '1.3' ? 'V3/C2' : 'C2');
+    // Die App liest beide Kodierungen; die Abweichung ist daher eine Warnung, kein Fehler
+    warn(`Zeichenkodierung ${d === 'utf-8' ? 'UTF-8' : 'ISO 8859-1'}, Spezifikation ${spec} verlangt ${profile.charsetLabel} – die ${profile.appName} liest beides`, 'V3/C2');
   const k = records[0]?.[0] === 'K' ? records[0] : undefined;
   const primary = k?.[1] === '1';
 
