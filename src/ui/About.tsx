@@ -9,20 +9,20 @@ export function About({ spec }: { spec: SpecVersion }) {
         <h2>Worauf der Simulator beruht</h2>
         <p>
           Grundlage ist die „Schnittstellendefinition QR-Code – Technische Beschreibung des Datenformats“ der Generalzolldirektion. Gewählt ist Version{' '}
-          <b>{spec}</b> vom {p.date} ({p.status}); oben rechts lässt sich zwischen 1.2 und 1.3 wechseln. Fassung 1.2 ist auf{' '}
-          <a href="https://www.zoll.de/DE/Fachthemen/Steuern/Umsatzsteuererstattung/anbindung_dakz_ezoll.html" target="_blank" rel="noreferrer">
-            zoll.de
+          <b>{spec}</b> vom {p.date} ({p.status}); oben rechts lässt sich zwischen 1.2 und 1.3 wechseln. Fassung 1.3 ist auf{' '}
+          <a href="https://www.zoll.de/DE/Service/Apps/eZOLL/Dienst-Ausfuhrkassenzettel/dienst-ausfuhrkassenzettel_node.html" target="_blank" rel="noreferrer">
+            zoll.de unter „Dienst Ausfuhrkassenzettel“
           </a>{' '}
-          veröffentlicht. Der Code wird beim Einkauf auf den Kassenbon gedruckt und vom Unternehmen mit der {p.appName} eingescannt.
+          veröffentlicht und hat dort Fassung 1.2 ersetzt. Der Code wird beim Einkauf auf den Kassenbon gedruckt und vom Unternehmen mit der {p.appName}{' '}
+          eingescannt.
         </p>
         <ul>
           <li>
             <code>K</code> Kopf, genau einmal: Nummer, Gesamtanzahl, BON_NR, BON_START, BON_ENDE (Unix-Sekunden UTC), UMS_BRUTTO über 50,00 €
-            {is13 && ', optional K8 Versionsnummer'}
           </li>
           <li>
             <code>E</code> Erweitert, nur im ersten Code: Netto, MwSt,{' '}
-            {is13 ? 'externe Referenz (E4)' : 'TSE-Signatur und öffentlicher Schlüssel (Base64), externe Referenz'}
+            {is13 ? 'zwei reservierte Felder mit dem festen Wert „-1“, externe Referenz' : 'TSE-Signatur und öffentlicher Schlüssel (Base64), externe Referenz'}
           </li>
           <li>
             <code>M</code> je Steuersatz, 1–5 Zeilen, nur im ersten Code: Satz, Brutto, Netto, MwSt
@@ -54,12 +54,12 @@ export function About({ spec }: { spec: SpecVersion }) {
               <tr>
                 <td>E-Zeile</td>
                 <td>E2 Netto, E3 MwSt, E4 TSE-Signatur, E5 öffentlicher Schlüssel (Pflicht), E6 Referenz</td>
-                <td>E2 Netto, E3 MwSt, E4 Referenz – keine TSE-Daten mehr im Code</td>
+                <td>E2 Netto, E3 MwSt, E4 RESERVED1 = „-1“, E5 RESERVED2 = „-1“ (Pflicht), E6 Referenz – keine TSE-Daten mehr im Code, Feldreihenfolge unverändert</td>
               </tr>
               <tr>
-                <td>Kopfzeile</td>
-                <td>K2–K7</td>
-                <td>K2–K7, optional K8 Versionsnummer</td>
+                <td>Versionsangabe im Code</td>
+                <td>keine</td>
+                <td>keine – erkennbar nur an E4/E5</td>
               </tr>
               <tr>
                 <td>Kapazität (V4, Kap. 5)</td>
@@ -85,12 +85,18 @@ export function About({ spec }: { spec: SpecVersion }) {
                 <td>Regex mit Leerzeichen</td>
                 <td>Leerzeichen entfernt</td>
               </tr>
+              <tr>
+                <td>Beispiele (Kap. 6)</td>
+                <td>6.1, 6.2, 6.3</td>
+                <td>6.1 und 6.2 (Überlauf, früher 6.3); Zeilenende LF, aber weiterhin UTF-8; 6.1 mit Fehlerkorrektur M</td>
+              </tr>
             </tbody>
           </table>
         </div>
         <p className="hint">
-          Die Rückprüfung erkennt die Fassung je Bon an K8 oder an der Feldzahl der E-Zeile und die Kodierung an den Rohbytes. Unter „Fehler einbauen“ lässt sich ein
-          Bon absichtlich in der falschen Kodierung erzeugen.
+          Die Rückprüfung erkennt die Fassung je Bon an E4/E5 und die Kodierung an den Rohbytes. Unter „Fehler einbauen“ lässt sich ein Bon absichtlich in der
+          falschen Kodierung erzeugen. Nach Kap. 1.4 (Toleranzprinzip) müssen Leser unbekannte zusätzliche Felder am Zeilenende ignorieren; der Prüfer meldet sie
+          nur als Warnung.
         </p>
       </section>
       <section className="panel">

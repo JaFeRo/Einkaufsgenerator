@@ -1,7 +1,8 @@
 /**
  * Unterstützte Fassungen der „Schnittstellendefinition QR-Code“ und ihre Unterschiede.
  * 1.2 (01.09.2026): UTF-8, TSE-Signatur und öffentlicher Schlüssel in E4/E5.
- * 1.3 (26.10.2026, vorgelegt): ISO 8859-1, keine TSE-Felder, E4 = externe Referenz, optional K8 = Version.
+ * 1.3 (26.10.2026, vorgelegt): ISO 8859-1, E4/E5 statt TSE-Daten als RESERVED1/RESERVED2 mit festem Wert „-1“,
+ * E6 bleibt die externe Referenz. Die Feldreihenfolge ist in beiden Fassungen gleich.
  */
 export type SpecVersion = '1.2' | '1.3';
 export type Charset = 'utf-8' | 'iso-8859-1';
@@ -12,10 +13,8 @@ export interface SpecProfile {
   status: string;
   charset: Charset;
   charsetLabel: string;
-  /** E4/E5 enthalten TSE-Signatur und öffentlichen Schlüssel */
+  /** E4/E5 enthalten TSE-Signatur und öffentlichen Schlüssel; sonst RESERVED mit Wert „-1“ */
   tse: boolean;
-  /** K8 Versionsnummer vorgesehen */
-  versionField: boolean;
   /** Höchstzahl Zeichen je Code laut Kapitel 5 */
   maxChars: number;
   /** Name der Scan-Anwendung im Text */
@@ -30,7 +29,6 @@ export const SPECS: Record<SpecVersion, SpecProfile> = {
     charset: 'utf-8',
     charsetLabel: 'UTF-8',
     tse: true,
-    versionField: false,
     maxChars: 2420,
     appName: 'eZOLL-App'
   },
@@ -41,7 +39,6 @@ export const SPECS: Record<SpecVersion, SpecProfile> = {
     charset: 'iso-8859-1',
     charsetLabel: 'ISO 8859-1',
     tse: false,
-    versionField: true,
     maxChars: 1663,
     appName: 'KMU-App'
   }
@@ -97,18 +94,14 @@ export function decodeBytes(bytes: Uint8Array): DecodedBytes {
 }
 
 /**
- * Fassung eines Codes erkennen: K8 nennt sie ausdrücklich; sonst unterscheidet die Feldzahl der
- * E-Zeile (1.2: E2–E5 Pflicht, E6 optional; 1.3: E2–E3 Pflicht, E4 optional).
- * Folgecodes ohne E-Zeile und ohne K8 lassen sich nicht zuordnen.
+ * Fassung eines Codes erkennen. Der Code selbst nennt keine Version; beide Fassungen haben dieselben
+ * Felder, unterscheiden sich aber in E4/E5: 1.3 schreibt dort fest „-1“, 1.2 die TSE-Daten.
+ * Folgecodes haben keine E-Zeile und lassen sich nur über ihren Primärcode zuordnen.
  */
 export function detectSpec(records: string[][]): { version: SpecVersion | null; reason: string } {
-  const k = records[0]?.[0] === 'K' ? records[0] : undefined;
-  if (k?.[7] && isSpecVersion(k[7].trim())) return { version: k[7].trim() as SpecVersion, reason: `K8 = ${k[7]}` };
   const e = records.find((r) => r[0] === 'E');
-  if (e) {
-    const fields = e.length - 1;
-    if (fields >= 4) return { version: '1.2', reason: `E-Zeile mit ${fields} Feldern (TSE-Felder)` };
-    return { version: '1.3', reason: `E-Zeile mit ${fields} Feldern (ohne TSE)` };
-  }
-  return { version: null, reason: 'Folgecode ohne K8' };
+  if (!e) return { version: null, reason: 'Folgecode ohne E-Zeile' };
+  if (e[3] === '-1' && e[4] === '-1') return { version: '1.3', reason: 'E4/E5 = -1 (RESERVED)' };
+  if (e.length > 4) return { version: '1.2', reason: 'E4/E5 mit TSE-Daten' };
+  return { version: null, reason: `E-Zeile mit ${e.length - 1} Feldern, keiner Fassung zuzuordnen` };
 }

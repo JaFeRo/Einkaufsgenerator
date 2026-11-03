@@ -11,7 +11,7 @@ Alle erzeugten Belege sind Testdaten mit fiktiven Händlerangaben, tragen den Au
 - Positionen und Kopfdaten frei bearbeitbar, Prüfung live
 - **Eigene Bons** als Testfälle speichern, laden, aktualisieren, löschen sowie als JSON exportieren und importieren (im Browser gespeichert)
 - **Eindeutige BON_NR**: fortlaufender Zähler, jeder neue Bon bekommt die nächste freie Nummer; „Gleicher Einkauf, neue Nr.“ für wiederholte Scans; Warnung bei schon verwendeten Nummern; Startwert frei setzbar
-- QR-Codes im Byte-Modus (1.2: UTF-8 mit TSE-Feldern, 1.3: ISO 8859-1 ohne TSE, optional K8) mit Fehlerkorrektur Q; automatische Aufteilung ab 1.663 Byte oder einer selbst gewählten Grenze
+- QR-Codes im Byte-Modus (1.2: UTF-8 mit TSE-Daten in E4/E5, 1.3: ISO 8859-1 mit „-1“ in E4/E5) mit Fehlerkorrektur Q; automatische Aufteilung ab 1.663 Byte oder einer selbst gewählten Grenze
 - TSE-Daten zufällig oder als echte ECDSA-Signatur (P-384)
 - Fehler einbauen für Negativtests (Summen, Zeilen, CRLF, Steuersatz-Format, ECC M)
 - Scanmodus: Code groß auf dem Bildschirm (kleinere Codes proportional kleiner), Pfeiltasten für Teilcodes, Leertaste für den nächsten Bon, N für gleichen Einkauf mit neuer Bon-Nr.

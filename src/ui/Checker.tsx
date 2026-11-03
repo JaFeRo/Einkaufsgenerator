@@ -175,15 +175,15 @@ export function Checker({ notify, spec }: { notify: (m: string) => void; spec: S
     );
   };
 
-  // Die QR-Codes der Fassung 1.3 als Rohbytes, so wie sie im Dokument abgebildet sind (Abb. 4 ist nur der Text zu Abb. 5).
+  // Die QR-Codes der Fassung 1.3 als Rohbytes, so wie sie im veröffentlichten Dokument abgebildet sind.
   const loadExamples13 = () => {
     const raw: [string, Uint8Array][] = [
-      ['Abb. 5 (6.1)', fromBase64(examples13.abb5)],
-      ['Abb. 7', fromBase64(examples13.abb7)],
-      ['Abb. 9 (1/2)', fromBase64(examples13.abb9)],
-      ['Abb. 11 (2/2)', fromBase64(examples13.abb11)]
+      ['6.1 (Abb. 5)', fromBase64(examples13.abb5)],
+      ['6.2 primär (Abb. 7)', fromBase64(examples13.abb7)],
+      ['6.2 sekundär (Abb. 9)', fromBase64(examples13.abb9)]
     ];
-    add(raw.map(([name, bytes]) => ({ ...decodeBytes(bytes), ecLevel: '', version: '', source: `Zoll-Beispiel 1.3 · ${name}` })));
+    const ecc = ['M', 'Q', 'Q'];
+    add(raw.map(([name, bytes], i) => ({ ...decodeBytes(bytes), ecLevel: ecc[i], version: '', source: `Zoll-Beispiel 1.3 · ${name}` })));
   };
 
   const clear = () => {
@@ -290,7 +290,7 @@ export function Checker({ notify, spec }: { notify: (m: string) => void; spec: S
           </div>
           <p className="hint">
             {mode === 'auto'
-              ? `Die Fassung wird je Bon aus K8 oder der Feldzahl der E-Zeile erkannt. Folgecodes ohne K8 und eingetippter Text ohne Hinweis werden nach ${spec} geprüft (oben gewählt).`
+              ? `Die Fassung wird je Bon an E4/E5 erkannt (1.3: „-1“, 1.2: TSE-Daten) und gilt auch für die Folgecodes. Folgecodes ohne Primärcode werden nach ${spec} geprüft (oben gewählt).`
               : `Alle Codes werden nach Fassung ${spec} geprüft, auch wenn sie nach einer anderen Fassung erzeugt wurden.`}
           </p>
         </div>
@@ -321,7 +321,7 @@ export function Checker({ notify, spec }: { notify: (m: string) => void; spec: S
 
 function BonCard({ group, sameBonNr, selected, mode }: { group: BonGroup; sameBonNr: number; selected: SpecVersion; mode: SpecMode }) {
   const [open, setOpen] = useState<number | null>(null);
-  // Fassung je Bon: erste eindeutige Angabe (K8 oder E-Zeile) gilt auch für die Folgecodes.
+  // Fassung je Bon: die E-Zeile des Primärcodes gilt auch für die Folgecodes.
   const detections = group.entries.map((e) => detectSpec(parseContent(e.scanned.text)));
   const found = detections.find((d) => d.version);
   const spec: SpecVersion = mode === 'auto' ? found?.version ?? selected : selected;
@@ -335,7 +335,7 @@ function BonCard({ group, sameBonNr, selected, mode }: { group: BonGroup; sameBo
   const k = entries[0].check.records[0]?.[0] === 'K' ? entries[0].check.records[0] : undefined;
 
   const findings: (Finding & { prefix?: string })[] = [...set.findings];
-  if (versions.size > 1) findings.push({ severity: 'error', ref: 'K8', message: 'Die Codes dieses Bons gehören zu verschiedenen Fassungen' });
+  if (versions.size > 1) findings.push({ severity: 'error', ref: 'E4', message: 'Die Codes dieses Bons gehören zu verschiedenen Fassungen' });
   if (mode === 'auto' && found?.version && found.version !== selected)
     findings.push({ severity: 'warning', message: `Code entspricht Fassung ${found.version}, oben gewählt ist ${selected}` });
   if (sameBonNr > 0)

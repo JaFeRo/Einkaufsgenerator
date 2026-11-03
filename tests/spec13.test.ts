@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import ex from '../src/dakz/zoll-beispiele-13.json';
+import ex12 from '../src/dakz/zoll-beispiele.json';
 import { RX13, SCENARIOS, decodeBytes, detectSpec, encodeText, generate, parseContent, validateCode, validateSet } from '../src/dakz';
 
 const scenario = (id: string, seed = 1) => SCENARIOS.find((s) => s.id === id)!.build(seed);
@@ -7,8 +8,8 @@ const bytesOf = (b64: string) => Uint8Array.from(Buffer.from(b64, 'base64'));
 const refs = (f: { findings: { ref?: string; severity: string }[] }, sev: string) => f.findings.filter((x) => x.severity === sev).map((x) => x.ref);
 
 describe('Fassung 1.3: Erzeugung', () => {
-  it('erzeugt den Datensatz aus Abbildung 4 (ohne TSE, ohne K8)', () => {
-    const { codes } = generate(scenario('zoll61'), { spec: '1.3', writeVersion: false, trailingLF: false });
+  it('erzeugt den Datensatz aus Abbildung 4 (E4/E5 = -1)', () => {
+    const { codes } = generate(scenario('zoll61'), { spec: '1.3', trailingLF: false });
     expect(codes[0].text).toBe(ex.abb4_text);
   });
 
@@ -21,18 +22,34 @@ describe('Fassung 1.3: Erzeugung', () => {
     expect(Array.from(c.data)).not.toContain(0xc3);
   });
 
-  it('schreibt K8 = 1.3 auf Wunsch, auch in Folgecodes', () => {
-    const { codes } = generate(scenario('overflow', 3), { spec: '1.3', writeVersion: true });
-    expect(codes.length).toBeGreaterThan(1);
-    codes.forEach((c) => expect(parseContent(c.text)[0][7]).toBe('1.3'));
+  it('K-Zeile hat in beiden Fassungen K1–K7, auch in Folgecodes', () => {
+    for (const spec of ['1.2', '1.3'] as const) {
+      const { codes } = generate(scenario('overflow', 3), { spec });
+      expect(codes.length).toBeGreaterThan(1);
+      codes.forEach((c) => expect(parseContent(c.text)[0]).toHaveLength(7));
+    }
   });
 
-  it('1.2 schreibt TSE-Felder und kein K8, 1.3 nicht', () => {
+  it('1.2 schreibt TSE-Daten in E4/E5, 1.3 den Platzhalter „-1“, E6 bleibt die Referenz', () => {
     const r = scenario('random', 4);
     const e12 = parseContent(generate(r, { spec: '1.2' }).codes[0].text).find((x) => x[0] === 'E')!;
     const e13 = parseContent(generate(r, { spec: '1.3' }).codes[0].text).find((x) => x[0] === 'E')!;
     expect(e12).toHaveLength(6);
-    expect(e13).toEqual(['E', e12[1], e12[2], e12[5]]);
+    expect(e13).toEqual(['E', e12[1], e12[2], '-1', '-1', e12[5]]);
+  });
+
+  it('erkennt die Fassung an E4/E5', () => {
+    const r = scenario('random', 4);
+    expect(detectSpec(parseContent(generate(r, { spec: '1.2' }).codes[0].text)).version).toBe('1.2');
+    expect(detectSpec(parseContent(generate(r, { spec: '1.3' }).codes[0].text)).version).toBe('1.3');
+    expect(detectSpec(parseContent(ex12.ex61)).version).toBe('1.2');
+    expect(detectSpec(parseContent('K;2;2;1;1770201944;1770201945;60,00\nP;19;1;60,00;1;Stück;X\n')).version).toBeNull();
+  });
+
+  it('E4/E5 ungleich „-1“ sind in 1.3 ein Fehler', () => {
+    const text = generate(scenario('random', 4), { spec: '1.2' }).codes[0].text;
+    const refsErr = refs(validateCode(text, { spec: '1.3' }), 'error');
+    expect(refsErr).toEqual(expect.arrayContaining(['E4', 'E5']));
   });
 
   it('ersetzt Zeichen außerhalb von ISO 8859-1 durch „?“ und meldet sie', () => {
@@ -61,30 +78,28 @@ describe('Fassung 1.3: Erzeugung', () => {
 });
 
 describe('Fassung 1.3: Prüfung der Dokument-Beispiele', () => {
-  const read = (k: 'abb5' | 'abb7' | 'abb9' | 'abb11') => decodeBytes(bytesOf(ex[k]));
+  const read = (k: 'abb5' | 'abb7' | 'abb9') => decodeBytes(bytesOf(ex[k]));
+  const check = (k: 'abb5' | 'abb7' | 'abb9') => {
+    const d = read(k);
+    return validateCode(d.text, { spec: '1.3', detectedCharset: d.detected });
+  };
 
-  it('alle Beispielcodes sind UTF-8 statt ISO 8859-1', () => {
-    for (const k of ['abb5', 'abb7', 'abb9', 'abb11'] as const) expect(read(k).detected, k).toBe('utf-8');
+  it('alle Beispielcodes sind UTF-8 statt ISO 8859-1, aber mit LF', () => {
+    for (const k of ['abb5', 'abb7', 'abb9'] as const) {
+      expect(read(k).detected, k).toBe('utf-8');
+      expect(read(k).text, k).not.toContain('\r');
+      expect(refs(check(k), 'error'), k).toEqual(['V3/C2']);
+    }
   });
 
-  it('Abb. 7 (6.2): CRLF und falsche Kodierung, Summen stimmen', () => {
-    const d = read('abb7');
-    const check = validateCode(d.text, { spec: '1.3', detectedCharset: d.detected });
-    expect(refs(check, 'error')).toEqual(expect.arrayContaining(['C3', 'V3/C2']));
-    expect(refs(check, 'warning').filter((r) => r === 'E2' || r === 'E3')).toEqual([]);
+  it('Abb. 5 (6.1) entspricht Abb. 4 und wird als 1.3 erkannt', () => {
+    expect(read('abb5').text).toBe(ex.abb4_text);
+    expect(detectSpec(parseContent(read('abb5').text)).version).toBe('1.3');
   });
 
-  it('Abb. 9 + 11 (6.3): E2/E3 passen nicht zu den M-Zeilen', () => {
-    const a = read('abb9');
-    const check = validateCode(a.text, { spec: '1.3', detectedCharset: a.detected });
-    expect(refs(check, 'warning')).toEqual(expect.arrayContaining(['E2', 'E3']));
-    expect(validateSet([a.text, read('abb11').text]).complete).toBe(true);
-  });
-
-  it('Abb. 5 (6.1) ist noch ein 1.2-Code mit TSE-Feldern', () => {
-    const recs = parseContent(read('abb5').text);
-    expect(detectSpec(recs).version).toBe('1.2');
-    expect(detectSpec(parseContent(read('abb7').text)).version).toBe('1.3');
+  it('Abb. 7 + 9 (6.2): E2/E3 passen nicht zu den M-Zeilen, Satz vollständig', () => {
+    expect(refs(check('abb7'), 'warning')).toEqual(expect.arrayContaining(['E2', 'E3']));
+    expect(validateSet([read('abb7').text, read('abb9').text]).complete).toBe(true);
   });
 });
 

@@ -28,7 +28,7 @@ export const RX = {
 export const RX13 = {
   pBrutto: /^(?!-?0\d)(-?[1-4]?\d{1,4},\d{2}|-?50000|0)$/,
   mBetrag: /^(?!-?0\d)(-?[0-4]?\d{1,7}),\d{2}$/,
-  version: /^.{0,7}$/
+  reserved: /^-1$/
 } as const;
 
 export interface FieldSpec {
@@ -76,11 +76,13 @@ const SPEC_12: Record<LineType, FieldSpec[]> = {
 };
 
 const SPEC_13: Record<LineType, FieldSpec[]> = {
-  K: [...SPEC_12.K, f('K8', 'Versionsnummer', RX13.version, false, 'bis 7 Zeichen, z. B. 1.3')],
+  K: SPEC_12.K,
   E: [
     SPEC_12.E[0],
     SPEC_12.E[1],
-    f('E4', 'externeKundenReferenz', RX.ref, false, 'frei wählbar, bis 255 Zeichen')
+    f('E4', 'RESERVED1', RX13.reserved, true, 'genau „-1“'),
+    f('E5', 'RESERVED2', RX13.reserved, true, 'genau „-1“'),
+    SPEC_12.E[4]
   ],
   M: [
     SPEC_12.M[0],
@@ -195,7 +197,6 @@ export function validateCode(text: string, opts: ValidateOptions = {}): CodeChec
         warn(`${s.name}: ${v} liegt laut Text außerhalb ±50.000,00 (die Regex lässt es zu)`, s.id, li + 1);
       else if (s.id === 'P4' && spec === '1.3' && !v.includes(','))
         warn(`${s.name}: „${v}“ ohne Nachkommastellen – die Regex lässt es zu, der Text verlangt zwei`, s.id, li + 1);
-      else if (s.id === 'K8' && v !== spec) warn(`Code nennt Version ${v}, geprüft wird nach ${spec}`, s.id, li + 1);
     });
     if (r.length > fields.length + 1) {
       // Toleranzprinzip (Abschnitt 1.4): zusätzliche Felder am Zeilenende ignorieren

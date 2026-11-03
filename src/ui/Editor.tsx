@@ -100,7 +100,7 @@ export function Editor({ state, dispatch, counter, actions, saved, notify }: Edi
             <input id="merchant-address" value={merchant.address} onChange={(e) => dispatch({ type: 'merchant', patch: { address: e.target.value } })} />
           </label>
           <label className="field">
-            Externe Referenz ({profile.tse ? 'E6' : 'E4'})
+            Externe Referenz (E6)
             <input id="external-ref" value={receipt.externalRef} onChange={(e) => dispatch({ type: 'receipt', patch: { externalRef: e.target.value } })} />
           </label>
           <label className="field">
@@ -231,7 +231,7 @@ export function Editor({ state, dispatch, counter, actions, saved, notify }: Edi
               <option value="fixed">19,00 (wie Feldbeispiel)</option>
             </select>
           </label>
-          <label className="field" title={profile.tse ? undefined : 'Ab 1.3 stehen keine TSE-Daten im QR-Code, nur noch auf dem Bon'}>
+          <label className="field" title={profile.tse ? undefined : 'Ab 1.3 stehen in E4/E5 nur Platzhalter „-1“, die TSE-Daten stehen nur noch auf dem Bon'}>
             TSE-Daten{profile.tse ? ' (E4/E5)' : ' (nur Bon)'}
             <select id="tse-mode" value={state.tseMode} onChange={(e) => dispatch({ type: 'tseMode', value: e.target.value as 'random' | 'ecdsa' })}>
               <option value="random">Zufällig (Base64)</option>
@@ -242,16 +242,8 @@ export function Editor({ state, dispatch, counter, actions, saved, notify }: Edi
         <p className="hint">
           Höchstens {QR_CAPACITY_Q_BYTES.toLocaleString('de-DE')} Byte (Version 40, Q)
           {profile.charset === 'iso-8859-1' ? ', in ISO 8859-1 also 1.663 Zeichen' : ''}. Kleinere Werte erzwingen die Aufteilung auf mehrere Codes.
-          {profile.tse ? '' : ' TSE-Daten stehen ab 1.3 nicht mehr im QR-Code, der Bon druckt sie weiterhin.'}
+          {profile.tse ? '' : ' Ab 1.3 stehen in E4/E5 nur die Platzhalter „-1“ (RESERVED1/2); der Bon druckt die TSE-Daten weiterhin.'}
         </p>
-        {profile.versionField && (
-          <label className="check">
-            <input type="checkbox" checked={options.writeVersion} onChange={(e) => dispatch({ type: 'options', patch: { writeVersion: e.target.checked } })} />
-            <span>
-              K8 Versionsnummer „{state.spec}“ schreiben<small>optional, am Ende der K-Zeile; ohne K8 erkennt ein Leser die Fassung nur an der E-Zeile</small>
-            </span>
-          </label>
-        )}
         <label className="check">
           <input type="checkbox" checked={options.trailingLF} onChange={(e) => dispatch({ type: 'options', patch: { trailingLF: e.target.checked } })} />
           <span>

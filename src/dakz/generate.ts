@@ -7,7 +7,6 @@ export const QR_CAPACITY_Q_BYTES = 1663;
 
 export const DEFAULT_OPTIONS: GenerateOptions = {
   spec: '1.3',
-  writeVersion: true,
   rateStyle: 'plain',
   trailingLF: true,
   limitBytes: QR_CAPACITY_Q_BYTES,
@@ -38,7 +37,7 @@ export function computeTotals(positions: Position[]): Totals {
 type Row = (string | number)[];
 
 interface Lines {
-  head: { bonNr: string; start: number; end: number; total: string; version: string | null };
+  head: { bonNr: string; start: number; end: number; total: string };
   e: Row | null;
   m: Row[];
   p: Row[];
@@ -57,14 +56,13 @@ function buildLines(receipt: Receipt, opt: GenerateOptions): Lines {
     bonNr: receipt.bonNr,
     start: receipt.start,
     end: f.endBeforeStart ? receipt.start - 60 : receipt.end,
-    total: money(totals.gross + (f.totalMismatch ? 100 : 0)),
-    version: SPECS[opt.spec].versionField && opt.writeVersion ? opt.spec : null
+    total: money(totals.gross + (f.totalMismatch ? 100 : 0))
   };
 
-  // 1.2: E4/E5 = TSE-Signatur und öffentlicher Schlüssel, E6 = Referenz. 1.3: E4 = Referenz.
+  // E4/E5: 1.2 TSE-Signatur und öffentlicher Schlüssel, 1.3 RESERVED1/RESERVED2 = „-1“. E6 = Referenz.
   let e: Row | null = SPECS[opt.spec].tse
     ? ['E', money(totals.net), money(totals.vat), receipt.tseSignature, receipt.tsePublicKey]
-    : ['E', money(totals.net), money(totals.vat)];
+    : ['E', money(totals.net), money(totals.vat), '-1', '-1'];
   if (receipt.externalRef) e.push(receipt.externalRef);
   if (f.dropE) e = null;
 
@@ -85,9 +83,7 @@ function buildLines(receipt: Receipt, opt: GenerateOptions): Lines {
 }
 
 function kRow(head: Lines['head'], nr: number, count: number, writeCount: boolean): Row {
-  const row: Row = ['K', nr, writeCount ? count : '', head.bonNr, head.start, head.end, head.total];
-  if (head.version) row.push(head.version);
-  return row;
+  return ['K', nr, writeCount ? count : '', head.bonNr, head.start, head.end, head.total];
 }
 
 /** Zeichenkodierung, mit der tatsächlich erzeugt wird (Fehlerinjektion kehrt sie um). */

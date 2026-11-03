@@ -26,11 +26,11 @@ export interface Receipt {
   start: number;
   /** K6 BON_ENDE, Unix-Sekunden UTC */
   end: number;
-  /** 1.2: E4 TSE_TA_SIG (Base64). Ab 1.3 nicht mehr im QR-Code, aber weiter auf dem Bon. */
+  /** 1.2: E4 TSE_TA_SIG (Base64). Ab 1.3 steht in E4 „-1“, die Signatur nur noch auf dem Bon. */
   tseSignature: string;
   /** 1.2: E5 TSE_PUBLIC_KEY (Base64) */
   tsePublicKey: string;
-  /** externeKundenReferenz, optional (1.2: E6, 1.3: E4) */
+  /** E6 externeKundenReferenz, optional */
   externalRef: string;
   positions: Position[];
 }
@@ -66,8 +66,6 @@ export type EccLevel = 'L' | 'M' | 'Q' | 'H';
 export interface GenerateOptions {
   /** Fassung der Spezifikation */
   spec: SpecVersion;
-  /** 1.3: K8 Versionsnummer schreiben */
-  writeVersion: boolean;
   /** „19“ wie in den Beispielen oder „19,00“ wie im Feldbeispiel */
   rateStyle: RateStyle;
   /** EBNF: jeder record endet mit LF */

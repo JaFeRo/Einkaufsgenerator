@@ -71,7 +71,7 @@ export function App() {
               title={`Fassung ${v} vom ${SPECS[v].date} (${SPECS[v].status})`}
               onClick={() => {
                 dispatch({ type: 'spec', value: v });
-                notify(`Spezifikation ${v}: ${SPECS[v].charsetLabel}${SPECS[v].tse ? ', mit TSE-Feldern' : ', ohne TSE-Felder'}`);
+                notify(`Spezifikation ${v}: ${SPECS[v].charsetLabel}${SPECS[v].tse ? ', E4/E5 mit TSE-Daten' : ', E4/E5 = -1'}`);
               }}
             >
               {v}

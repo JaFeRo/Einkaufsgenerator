@@ -147,7 +147,7 @@ export function Inspector({ state, dispatch, bon, notify, counter, actions, save
                 <dt>{s.id}</dt>
                 <dd className="nm">{s.name}</dd>
                 <dd>
-                  {v || <span className="nm">leer{s.id === 'K3' ? ' → 1' : s.id === 'K8' ? ' (optional)' : ''}</span>}
+                  {v || <span className="nm">leer{s.id === 'K3' ? ' → 1' : ''}</span>}
                   {(s.id === 'K5' || s.id === 'K6') && /^\d{10}$/.test(v) && <span className="nm"> = {formatEpoch(+v, true)} UTC</span>}
                 </dd>
               </div>
