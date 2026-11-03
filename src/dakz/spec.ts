@@ -1,7 +1,7 @@
 /**
  * Unterstützte Fassungen der „Schnittstellendefinition QR-Code“ und ihre Unterschiede.
- * 1.2 (01.09.2026, abgelöst): UTF-8, TSE-Signatur und öffentlicher Schlüssel in E4/E5.
- * 1.3 (26.10.2026, auf zoll.de veröffentlicht): ISO 8859-1, E4/E5 als RESERVED1/RESERVED2 mit festem Wert „-1“,
+ * 1.2 (Dokumentdatum 01.09.2026, abgelöst): UTF-8, TSE-Signatur und öffentlicher Schlüssel in E4/E5.
+ * 1.3 (Dokumentdatum 26.10.2026, auf zoll.de veröffentlicht am 02.11.2026): ISO 8859-1, E4/E5 als RESERVED1/RESERVED2 mit festem Wert „-1“,
  * E6 bleibt die externe Referenz. Die Feldreihenfolge ist in beiden Fassungen gleich.
  */
 export type SpecVersion = '1.2' | '1.3';
@@ -9,7 +9,9 @@ export type Charset = 'utf-8' | 'iso-8859-1';
 
 export interface SpecProfile {
   version: SpecVersion;
+  /** Datum laut Titelblatt des Dokuments, nicht das Veröffentlichungsdatum */
   date: string;
+  /** z. B. Veröffentlichung auf zoll.de oder „abgelöst“ */
   status: string;
   charset: Charset;
   charsetLabel: string;
@@ -35,7 +37,7 @@ export const SPECS: Record<SpecVersion, SpecProfile> = {
   '1.3': {
     version: '1.3',
     date: '26.10.2026',
-    status: 'aktuell auf zoll.de',
+    status: 'auf zoll.de veröffentlicht am 02.11.2026',
     charset: 'iso-8859-1',
     charsetLabel: 'ISO 8859-1',
     tse: false,

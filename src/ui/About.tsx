@@ -9,7 +9,7 @@ export function About({ spec }: { spec: SpecVersion }) {
         <h2>Worauf der Simulator beruht</h2>
         <p>
           Grundlage ist die „Schnittstellendefinition QR-Code – Technische Beschreibung des Datenformats“ der Generalzolldirektion. Gewählt ist Version{' '}
-          <b>{spec}</b> vom {p.date} ({p.status}); oben rechts lässt sich zwischen 1.2 und 1.3 wechseln. Fassung 1.3 ist auf{' '}
+          <b>{spec}</b> (Dokumentdatum {p.date}), {p.status}; oben rechts lässt sich zwischen 1.2 und 1.3 wechseln. Fassung 1.3 ist auf{' '}
           <a href="https://www.zoll.de/DE/Service/Apps/eZOLL/Dienst-Ausfuhrkassenzettel/dienst-ausfuhrkassenzettel_node.html" target="_blank" rel="noreferrer">
             zoll.de unter „Dienst Ausfuhrkassenzettel“
           </a>{' '}
@@ -48,8 +48,8 @@ export function About({ spec }: { spec: SpecVersion }) {
             <tbody>
               <tr>
                 <td>Stand</td>
-                <td>Version 1.2 vom 01.09.2026, abgelöst</td>
-                <td>Version 1.3 vom 26.10.2026, aktuell auf zoll.de</td>
+                <td>Version 1.2 (Dokumentdatum 01.09.2026), abgelöst</td>
+                <td>Version 1.3 (Dokumentdatum 26.10.2026), auf zoll.de veröffentlicht am 02.11.2026</td>
               </tr>
               <tr>
                 <td>QR-Codierung (V3)</td>

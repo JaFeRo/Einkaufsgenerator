@@ -2,9 +2,11 @@
 
 Archiv der „Schnittstellendefinition QR-Code – Technische Beschreibung des Datenformats“ (Generalzolldirektion), damit spätere Fassungen verglichen werden können.
 
-| Datei | Version | Stand | Bezogen |
-|---|---|---|---|
-| `Schnittstellendefinition_QR-Code_1.3.pdf` | 1.3 vom 26.10.2026 | aktuell | 03.11.2026 von zoll.de |
+| Datei | Version | Dokumentdatum (Titelblatt) | Auf zoll.de veröffentlicht | Bezogen |
+|---|---|---|---|---|
+| `Schnittstellendefinition_QR-Code_1.3.pdf` | 1.3 (aktuell) | 26.10.2026 | 02.11.2026 | 03.11.2026 |
+
+Das Dokumentdatum ist nicht das Veröffentlichungsdatum. zoll.de nennt kein Datum; am 02.11.2026 lieferte die Seite bei einem Abruf noch Fassung 1.2 aus, am 03.11.2026 die 1.3.
 
 Quelle: [zoll.de – Dienst Ausfuhrkassenzettel](https://www.zoll.de/DE/Service/Apps/eZOLL/Dienst-Ausfuhrkassenzettel/dienst-ausfuhrkassenzettel_node.html) → „Anforderungen an den QR-Code“
 (`anforderungen_an_qr_code.pdf?__blob=publicationFile&v=3`).

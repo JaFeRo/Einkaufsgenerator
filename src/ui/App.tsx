@@ -68,7 +68,7 @@ export function App() {
               key={v}
               role="radio"
               aria-checked={state.spec === v}
-              title={`Fassung ${v} vom ${SPECS[v].date} (${SPECS[v].status})`}
+              title={`Fassung ${v} (Dokumentdatum ${SPECS[v].date}), ${SPECS[v].status}`}
               onClick={() => {
                 dispatch({ type: 'spec', value: v });
                 notify(`Spezifikation ${v}: ${SPECS[v].charsetLabel}${SPECS[v].tse ? ', E4/E5 mit TSE-Daten' : ', E4/E5 = -1'}`);

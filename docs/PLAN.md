@@ -2,7 +2,7 @@
 
 Ein Simulator, der realistische Kassenbons mit QR-Codes für den **digitalen Ausfuhrkassenzettel (dAKZ)** erzeugt. Damit lässt sich das Einscannen mit der eZOLL-App (Dienst „Ausfuhrkassenzettel“) oder mit eigenen Scannern testen, ohne ein echtes Kassensystem.
 
-Grundlage: **„Schnittstellendefinition QR-Code – Technische Beschreibung des Datenformats“**, Generalzolldirektion, Version 1.2 vom 01.09.2026 und Version 1.3 vom 26.10.2026 (aktuelle, auf zoll.de veröffentlichte Fassung; 1.2 ist abgelöst). Die App schaltet zwischen beiden Fassungen um (`src/dakz/spec.ts`).
+Grundlage: **„Schnittstellendefinition QR-Code – Technische Beschreibung des Datenformats“**, Generalzolldirektion, Version 1.2 (Dokumentdatum 01.09.2026, abgelöst) und Version 1.3 (Dokumentdatum 26.10.2026, auf zoll.de veröffentlicht am 02.11.2026). Die App schaltet zwischen beiden Fassungen um (`src/dakz/spec.ts`).
 Quelle: [zoll.de – Dienst Ausfuhrkassenzettel](https://www.zoll.de/DE/Service/Apps/eZOLL/Dienst-Ausfuhrkassenzettel/dienst-ausfuhrkassenzettel_node.html) → „Anforderungen an den QR-Code“ (PDF).
 
 Die App liegt unter `src/` (siehe README). Der anfängliche HTML-Prototyp ist darin aufgegangen.

@@ -75,7 +75,7 @@ export async function seriesZip(state: AppState, n: number, bons: SavedBon[], ta
   zip.file('uebersicht.csv', '﻿' + rows.map((r) => r.map(csvCell).join(';')).join('\r\n'));
   zip.file(
     'LIESMICH.txt',
-    `dAKZ Bonsimulator – Serienexport\nSpezifikation: ${state.spec} (${SPECS[state.spec].date})\nQuelle: ${label}\nAnzahl: ${n}\nBon-Nummern: fortlaufend vom Zähler, jede nur einmal\n\nAlle Daten sind Testdaten. Die .txt-Dateien enthalten die exakten Bytes des QR-Inhalts (${charsetLabel(effectiveCharset({ spec: state.spec, faults: state.options.faults }))}).\n`
+    `dAKZ Bonsimulator – Serienexport\nSpezifikation: ${state.spec} (Dokumentdatum ${SPECS[state.spec].date})\nQuelle: ${label}\nAnzahl: ${n}\nBon-Nummern: fortlaufend vom Zähler, jede nur einmal\n\nAlle Daten sind Testdaten. Die .txt-Dateien enthalten die exakten Bytes des QR-Inhalts (${charsetLabel(effectiveCharset({ spec: state.spec, faults: state.options.faults }))}).\n`
   );
   return zip.generateAsync({ type: 'blob' });
 }
