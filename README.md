@@ -45,7 +45,7 @@ src/qr/      QR-Kodierung (qrcode-generator, Byte-Modus, ECC Q)
 src/scan/    QR-Erkennung (zxing-wasm, WASM wird mitgeliefert)
 src/ui/      React-Oberfläche
 tests/       Golden-Tests gegen die Zoll-Beispiele, Regex-Grenzwerte, QR-Rundlauf
-docs/        Plan, Auswertung der Spezifikation, Rückfragen an den Autor (nur als Dokument)
+docs/        Plan, Auswertung der Spezifikation, Rückfragen an den Autor, Archiv der Spezifikation (docs/spezifikation)
 ```
 
 ## Veröffentlichung
