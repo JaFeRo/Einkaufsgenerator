@@ -1,24 +1,34 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { SPECS, SPEC_VERSIONS } from '../dakz';
+import { SPECS, SPEC_VERSIONS, type Merchant, type Receipt } from '../dakz';
 import { About } from './About';
 import { Checker } from './Checker';
+import { Demo } from './Demo';
 import { Generator } from './Generator';
 import { initialState, persistable, reducer } from './state';
 import { KEYS, saveJson } from './storage';
 import { takeBonNr, useBonCounter } from './useBonCounter';
 import { useSavedBons } from './useSavedBons';
 
-type View = 'generator' | 'checker' | 'about';
+type View = 'generator' | 'checker' | 'about' | 'demo';
 const VIEWS: { id: View; label: string }[] = [
   { id: 'generator', label: 'Bons erzeugen' },
   { id: 'checker', label: 'Rückprüfung' },
-  { id: 'about', label: 'Spezifikation' }
+  { id: 'about', label: 'Spezifikation' },
+  { id: 'demo', label: 'Demo' }
 ];
+const HASH: Record<View, string> = { generator: '', checker: '#pruefen', about: '#info', demo: '#demo' };
 
 /** Testkanal: wird beim Bauen der Testversion gesetzt (VITE_CHANNEL=test). */
 const IS_TEST = import.meta.env.VITE_CHANNEL === 'test';
 
-const viewFromHash = (): View => (window.location.hash === '#pruefen' ? 'checker' : window.location.hash === '#info' ? 'about' : 'generator');
+function viewFromHash(): View {
+  const h = window.location.hash;
+  if (h === '#pruefen') return 'checker';
+  if (h === '#info') return 'about';
+  // „#demo“ oder „#demo/<händler>“
+  if (h === '#demo' || h.startsWith('#demo/')) return 'demo';
+  return 'generator';
+}
 
 export function App() {
   const [state, dispatch] = useReducer(reducer, undefined, () => initialState(takeBonNr));
@@ -47,8 +57,13 @@ export function App() {
 
   const select = (v: View) => {
     setView(v);
-    const hash = v === 'checker' ? '#pruefen' : v === 'about' ? '#info' : '';
-    window.history.replaceState(null, '', window.location.pathname + window.location.search + hash);
+    window.history.replaceState(null, '', window.location.pathname + window.location.search + HASH[v]);
+  };
+
+  const openInBench = (receipt: Receipt, merchant: Merchant) => {
+    dispatch({ type: 'newBon', scenarioId: 'demo', receipt, merchant });
+    select('generator');
+    notify(`Bon ${receipt.bonNr} in der Werkbank geöffnet`);
   };
 
   return (
@@ -89,6 +104,7 @@ export function App() {
       {view === 'generator' && <Generator state={state} dispatch={dispatch} counter={counter} saved={saved} notify={notify} />}
       {view === 'checker' && <Checker notify={notify} spec={state.spec} />}
       {view === 'about' && <About spec={state.spec} />}
+      {view === 'demo' && <Demo spec={state.spec} counter={counter} notify={notify} onOpenInBench={openInBench} />}
       {toast && (
         <div className="toast" role="status">
           {toast}

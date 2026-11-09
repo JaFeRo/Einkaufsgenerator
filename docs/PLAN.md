@@ -106,6 +106,7 @@ tests/
 | 4 – Rückprüfung | erledigt: Kamera, Upload/Einfügen, Text; Zusammenführung mehrteiliger Bons |
 | 5 – Feinschliff | ECDSA-Signatur und Pages-Workflow erledigt; offen: Playwright-Tests im CI |
 | 7 – QR-Größe wie gedruckt | erledigt: feste Modulgröße (3/4/6 Punkte), Code wächst mit dem Inhalt bis zur Druckbreite, gleiches Verhalten auf Bildschirm, im Druckdialog und im Scanmodus; Tests für Version-Wahl und Layout |
+| 9 – Demo-Modus | erledigt (`docs/DEMO-MODUS.md`): Reiter „Demo“ mit Kasse und großem Bon, 7 Testhändler (`src/dakz/merchants.ts`), Beispielkörbe, Wiegeware, freie Position, Mindestumsatz-Sperre, Vollbild, Tastatur, eigener Zustand, Deep-Link; Tests in `tests/demo.test.ts`; manuell geprüft bei 1920 × 1080 und 390 px, Demo-Bon in der Rückprüfung „Vollständig & konform“ |
 | 8 – Fassungen 1.2/1.3 | erledigt (Testversion unter `/test/`): Umschalter im Kopf; 1.3 mit ISO 8859-1, E4/E5 = „-1“ (RESERVED) statt TSE-Daten, E6 = Referenz, neue Regex für P4 und M3–M5, 1.663 Zeichen; Rückprüfung erkennt Fassung (an E4/E5) und Kodierung je Bon; Fehlerinjektion „falsche Kodierung“; Golden-Test gegen Abb. 4 der veröffentlichten Fassung |
 | 6 – Eigene Bons & BON_NR | erledigt: Bons speichern/laden/exportieren/importieren; fortlaufender, eindeutiger BON_NR-Zähler (Duplikatsprüfung im Backend läuft über BON_NR); Doppel-Erkennung in der Rückprüfung |
 

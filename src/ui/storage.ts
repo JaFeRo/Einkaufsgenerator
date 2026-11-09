@@ -20,5 +20,6 @@ export function saveJson(key: string, value: unknown): boolean {
 export const KEYS = {
   counter: 'dakz.bonCounter.v1',
   bons: 'dakz.savedBons.v1',
-  current: 'dakz.current.v1'
+  current: 'dakz.current.v1',
+  demo: 'dakz.demo.v1'
 } as const;

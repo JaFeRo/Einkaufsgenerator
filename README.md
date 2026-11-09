@@ -24,6 +24,13 @@ Alle erzeugten Belege sind Testdaten mit fiktiven Händlerangaben, tragen den Au
 - Feldprüfung mit den regulären Ausdrücken der jeweiligen Fassung (in der Rückprüfung automatisch erkannt, auch die Zeichenkodierung), Summenkontrolle, Hinweis bei anderer Fehlerkorrektur als Q
 - Fehler, wenn verschiedene gescannte Bons dieselbe BON_NR tragen
 
+**Demo** (`#demo`, `#demo/<händler>`) – Kassenansicht für Präsentationen
+- Sieben fiktive Testhändler mit eigenem Sortiment und Bonkopf (Kaufhaus, Mode, Elektro, Parfümerie, Uhren & Schmuck, Feinkost, Sport)
+- Kasse links: Artikelkacheln mit Kategorie-Filter und Suche, Wiegeware mit Gewichtseingabe, freie Position, Beispieleinkäufe, Warenkorb mit −/+
+- Bon rechts groß und live mitwachsend; der QR-Code erscheint nach „Bon abschließen“ (BON_NR vom gemeinsamen Zähler), Abschluss erst über 50,00 €
+- „QR groß anzeigen“, „Nächster Kunde“, „In Werkbank öffnen“, Vollbild; Tasten: Enter abschließen, Leertaste nächster Kunde, S QR groß, Esc schließen
+- Eigener Zustand im Browser, unabhängig vom Bon der Werkbank; feste Einstellungen (ECC Q, keine Fehler), Fassung nach dem Umschalter im Kopf
+
 ## Entwicklung
 
 ```bash
@@ -40,12 +47,12 @@ Die Kamera braucht HTTPS oder `localhost`.
 ## Aufbau
 
 ```
-src/dakz/    Kern ohne UI: Datenmodell, Generator, Validator, Szenarien
+src/dakz/    Kern ohne UI: Datenmodell, Generator, Validator, Szenarien, Demo-Händler
 src/qr/      QR-Kodierung (qrcode-generator, Byte-Modus, ECC Q)
 src/scan/    QR-Erkennung (zxing-wasm, WASM wird mitgeliefert)
 src/ui/      React-Oberfläche
 tests/       Golden-Tests gegen die Zoll-Beispiele, Regex-Grenzwerte, QR-Rundlauf
-docs/        Plan, Auswertung der Spezifikation, Rückfragen an den Autor, Archiv der Spezifikation (docs/spezifikation)
+docs/        Plan, Demo-Modus, Auswertung der Spezifikation, Rückfragen an den Autor, Archiv der Spezifikation (docs/spezifikation)
 ```
 
 ## Veröffentlichung

@@ -4,7 +4,11 @@ export const TEMPLATE_PREFIX = 'tpl:';
 
 export const templateId = (scenarioId: string) => (scenarioId.startsWith(TEMPLATE_PREFIX) ? scenarioId.slice(TEMPLATE_PREFIX.length) : null);
 
+/** Bon aus dem Demo-Modus, über „In Werkbank öffnen“ übernommen */
+export const DEMO_SOURCE = 'demo';
+
 export function sourceLabel(scenarioId: string, bons: SavedBon[]): string {
+  if (scenarioId === DEMO_SOURCE) return 'Demo-Bon';
   const id = templateId(scenarioId);
   if (id) return bons.find((b) => b.id === id)?.name ?? 'Gespeicherter Bon';
   return SCENARIOS.find((s) => s.id === scenarioId)?.label ?? SCENARIOS[0].label;

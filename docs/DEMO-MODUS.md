@@ -109,6 +109,8 @@ Echte Kartenzahlung, Kundendisplay auf zweitem Bildschirm, Drucken aus der Demo,
 
 ## 12. Offene Fragen (vor dem Bau klären, sonst Standard nehmen)
 
+> **Entschieden:** Für alle vier Fragen gilt der Standard (umgesetzt am 09.11.2026): Die Fassung folgt dem Umschalter im Kopf, kein Schalter „Technik einblenden“, Händlerkopf nicht editierbar, Laptop/Beamer und Tablet wie in Abschnitt 9.
+
 1. **Fassung in der Demo:** Folgt sie dem Umschalter im Kopf (Standard) oder ist sie fest auf 1.3?
 2. **Publikum:** Fachbereich/Zoll oder Händler? Bei technischem Publikum ein Schalter „Technik einblenden“, der unter dem Bon das CSV des QR-Codes zeigt. Standard: nicht bauen.
 3. **Händlerkopf frei editierbar** (Name eintippen, z. B. für eine Präsentation bei einem konkreten Partner)? Standard: nein, nur die vordefinierten.

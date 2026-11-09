@@ -6,3 +6,4 @@ export * from './scenarios';
 export * from './bonNumber';
 export * from './templates';
 export * from './spec';
+export * from './merchants';

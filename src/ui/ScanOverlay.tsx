@@ -13,14 +13,16 @@ interface Props {
   duplicate: boolean;
   onClose: () => void;
   onNextBon: () => void;
-  onRenumber: () => void;
+  /** Ohne Angabe entfällt „Gleicher Einkauf, neue Nr.“ (Demo-Modus) */
+  onRenumber?: () => void;
+  nextLabel?: string;
 }
 
 /**
  * Bildschirmfüllende Anzeige zum Scannen vom Monitor.
  * Pfeiltasten: Teilcodes · Leertaste: nächster Bon · N: gleicher Einkauf mit neuer Bon-Nr. · Esc: schließen
  */
-export function ScanOverlay({ bon, bonNr, duplicate, onClose, onNextBon, onRenumber }: Props) {
+export function ScanOverlay({ bon, bonNr, duplicate, onClose, onNextBon, onRenumber, nextLabel = 'Nächster Bon' }: Props) {
   const [i, setI] = useState(0);
   const idx = Math.min(i, bon.codes.length - 1);
   const c = bon.codes[idx];
@@ -34,7 +36,7 @@ export function ScanOverlay({ bon, bonNr, duplicate, onClose, onNextBon, onRenum
       else if (e.key === ' ') {
         e.preventDefault();
         onNextBon();
-      } else if (e.key === 'n' || e.key === 'N') onRenumber();
+      } else if ((e.key === 'n' || e.key === 'N') && onRenumber) onRenumber();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -61,8 +63,8 @@ export function ScanOverlay({ bon, bonNr, duplicate, onClose, onNextBon, onRenum
             </button>
           </>
         )}
-        <button onClick={onRenumber}>Gleicher Einkauf, neue Nr. (N)</button>
-        <button onClick={onNextBon}>Nächster Bon (Leertaste)</button>
+        {onRenumber && <button onClick={onRenumber}>Gleicher Einkauf, neue Nr. (N)</button>}
+        <button onClick={onNextBon}>{nextLabel} (Leertaste)</button>
       </div>
     </div>
   );

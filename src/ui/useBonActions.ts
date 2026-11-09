@@ -1,6 +1,6 @@
 import { useMemo, type Dispatch } from 'react';
-import { newSeed, type SavedBon } from '../dakz';
-import { buildBon, templateId } from './sources';
+import { MERCHANT, newSeed, type SavedBon } from '../dakz';
+import { DEMO_SOURCE, buildBon, templateId } from './sources';
 import type { Action, AppState } from './state';
 import type { BonCounter } from './useBonCounter';
 
@@ -30,7 +30,7 @@ export function useBonActions(state: AppState, dispatch: Dispatch<Action>, count
     };
     return {
       duplicate,
-      newBon: (id = scenarioId === 'zoll61' ? 'random' : scenarioId) => {
+      newBon: (id = scenarioId === 'zoll61' || scenarioId === DEMO_SOURCE ? 'random' : scenarioId) => {
         const bonNr = take();
         if (!bonNr) return;
         const { receipt: r, template } = buildBon(id, bons, bonNr, newSeed());
@@ -40,7 +40,10 @@ export function useBonActions(state: AppState, dispatch: Dispatch<Action>, count
             : templateId(scenarioId)
               ? // Vom eigenen Bon zurück zum Standard-Szenario: dessen eingebaute Fehler nicht übernehmen
                 { type: 'newBon', scenarioId: id, receipt: r, options: { ...options, faults: {} }, eccOverride: null }
-              : { type: 'newBon', scenarioId: id, receipt: r }
+              : scenarioId === DEMO_SOURCE
+                ? // Nach einem Demo-Bon wieder mit dem Standardhändler weiter
+                  { type: 'newBon', scenarioId: id, receipt: r, merchant: { ...MERCHANT } }
+                : { type: 'newBon', scenarioId: id, receipt: r }
         );
       },
       renumber: () => {
