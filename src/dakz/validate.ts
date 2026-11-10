@@ -1,5 +1,5 @@
 import { money, parseMoney } from './format';
-import { QR_CAPACITY_Q_BYTES } from './generate';
+import { DE_VAT_RATES, QR_CAPACITY_Q_BYTES } from './generate';
 import { SPECS, byteLength, detectSpec, type Charset, type SpecVersion } from './spec';
 import type { CodeCheck, Finding } from './types';
 
@@ -198,6 +198,8 @@ export function validateCode(text: string, opts: ValidateOptions = {}): CodeChec
         warn(`${s.name}: ${v} liegt laut Text außerhalb ±50.000,00 (die Regex lässt es zu)`, s.id, li + 1);
       else if (s.id === 'P4' && spec === '1.3' && !v.includes(','))
         warn(`${s.name}: „${v}“ ohne Nachkommastellen – die Regex lässt es zu, der Text verlangt zwei`, s.id, li + 1);
+      else if ((s.id === 'P2' || s.id === 'M2') && !DE_VAT_RATES.includes(parseFloat(v.replace(',', '.'))))
+        err(`${s.name}: ${v} % – in Deutschland gelten nur 7 und 19 %, die App erwartet einen davon (die Regex lässt den Wert zu)`, s.id, li + 1);
     });
     if (r.length > fields.length + 1) {
       // Toleranzprinzip (Abschnitt 1.4): zusätzliche Felder am Zeilenende ignorieren

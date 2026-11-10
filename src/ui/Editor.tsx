@@ -7,7 +7,8 @@ import type { BonActions } from './useBonActions';
 import type { BonCounter } from './useBonCounter';
 import type { SavedBonsApi } from './useSavedBons';
 
-const RATES = [0, 7, 19, 5, 8, 13, 21];
+// Nur die deutschen Sätze; andere gibt es als Fehler „Fremde Steuersätze“
+const RATES = [7, 19];
 
 /** Dezimalfeld, das Zwischenstände wie „0,“ beim Tippen zulässt. */
 function DecimalInput({ value, onChange, id, digits }: { value: number; onChange: (n: number) => void; id: string; digits: number }) {
@@ -43,7 +44,12 @@ const FAULTS: { key: keyof Faults; label: string; title: string }[] = [
   { key: 'dropE', label: 'E-Zeile fehlt', title: 'Erweiterte Datenzeile weglassen' },
   { key: 'crlf', label: 'CRLF statt LF', title: 'Windows-Zeilenumbrüche' },
   { key: 'noPositions', label: 'Keine Positionen', title: 'Keine P-Zeilen' },
-  { key: 'rateWithSpace', label: 'Satz „19 “', title: 'Steuersatz mit Leerzeichen wie im PDF-Regex' }
+  { key: 'rateWithSpace', label: 'Satz „19 “', title: 'Steuersatz mit Leerzeichen wie im PDF-Regex' },
+  {
+    key: 'foreignRates',
+    label: 'Fremde Steuersätze',
+    title: 'Positionen reihum mit 8, 13, 21, 7 und 19 % wie Beispiel 6.2 aus 1.2: bis zu fünf M-Zeilen, 8, 13 und 21 % gibt es in Deutschland nicht'
+  }
 ];
 
 interface EditorProps {

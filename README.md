@@ -7,13 +7,13 @@ Alle erzeugten Belege sind Testdaten mit fiktiven Händlerangaben, tragen den Au
 ## Funktionen
 
 **Bons erzeugen**
-- Szenarien: Zufallseinkauf, Zoll-Beispiel 6.1, 5 Steuersätze, Wiegeware, Rabatt & Pfand, Grenze 50,01 €, Sonderzeichen, Überlauf
+- Szenarien: Zufallseinkauf, Zoll-Beispiel 6.1, Wiegeware, Rabatt & Pfand, Grenze 50,01 €, Sonderzeichen, Überlauf
 - Positionen und Kopfdaten frei bearbeitbar, Prüfung live
 - **Eigene Bons** als Testfälle speichern, laden, aktualisieren, löschen sowie als JSON exportieren und importieren (im Browser gespeichert)
 - **Eindeutige BON_NR**: fortlaufender Zähler, jeder neue Bon bekommt die nächste freie Nummer; „Gleicher Einkauf, neue Nr.“ für wiederholte Scans; Warnung bei schon verwendeten Nummern; Startwert frei setzbar
 - QR-Codes im Byte-Modus (1.2: UTF-8 mit TSE-Daten in E4/E5, 1.3: ISO 8859-1 mit „-1“ in E4/E5) mit Fehlerkorrektur Q; automatische Aufteilung ab 1.663 Byte oder einer selbst gewählten Grenze
 - TSE-Daten zufällig oder als echte ECDSA-Signatur (P-384)
-- Fehler einbauen für Negativtests (Summen, Zeilen, CRLF, Steuersatz-Format, ECC M)
+- Fehler einbauen für Negativtests (Summen, Zeilen, CRLF, Steuersatz-Format, fremde Steuersätze 8/13/21 % mit fünf M-Zeilen, ECC M)
 - Scanmodus: Code groß auf dem Bildschirm (kleinere Codes proportional kleiner), Pfeiltasten für Teilcodes, Leertaste für den nächsten Bon, N für gleichen Einkauf mit neuer Bon-Nr.
 - QR-Größe wie auf dem echten Bon: feste Modulgröße (3, 4 oder 6 Druckpunkte bei 203 dpi), der Code wird mit dem Inhalt größer und füllt erst ab einer bestimmten Menge die Druckbreite (72 mm bei 80-mm-, 48 mm bei 58-mm-Papier); gilt für Bildschirm und Druck
 - Druck für 58- oder 80-mm-Papier, Export als PNG und TXT, Serie als ZIP, Bon als Link teilen
@@ -21,7 +21,7 @@ Alle erzeugten Belege sind Testdaten mit fiktiven Händlerangaben, tragen den Au
 **Rückprüfung**
 - Codes per Kamera, Foto/Screenshot (auch Drag & Drop und Strg+V) oder als Text einlesen
 - Codes eines Bons werden zusammengeführt (1/3, 2/3 …) und gemeinsam geprüft
-- Feldprüfung mit den regulären Ausdrücken der jeweiligen Fassung (in der Rückprüfung automatisch erkannt, auch die Zeichenkodierung), Summenkontrolle, Hinweis bei anderer Fehlerkorrektur als Q
+- Feldprüfung mit den regulären Ausdrücken der jeweiligen Fassung (in der Rückprüfung automatisch erkannt, auch die Zeichenkodierung), Summenkontrolle, Fehler bei Steuersätzen außer 7 und 19 %, Hinweis bei anderer Fehlerkorrektur als Q
 - Fehler, wenn verschiedene gescannte Bons dieselbe BON_NR tragen
 
 **Demo** (`#demo`, `#demo/<händler>`) – Kassenansicht für Präsentationen

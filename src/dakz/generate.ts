@@ -5,6 +5,11 @@ import type { GenerateOptions, GenerateResult, Position, Receipt, Totals } from 
 /** Version 40, ECC Q, Byte-Modus: 1.663 Byte (siehe docs/PLAN.md, Abschnitt 2). */
 export const QR_CAPACITY_Q_BYTES = 1663;
 
+/** In Deutschland gültige Steuersätze (§ 12 Abs. 1 und 2 UStG); die App erwartet einen davon. */
+export const DE_VAT_RATES = [7, 19];
+/** Fehlerinjektion „Fremde Steuersätze“: beginnt mit einem ungültigen Satz, damit schon ein Artikel genügt */
+export const FOREIGN_RATES = [8, 13, 21, 7, 19];
+
 export const DEFAULT_OPTIONS: GenerateOptions = {
   spec: '1.3',
   rateStyle: 'plain',
@@ -44,9 +49,10 @@ interface Lines {
   totals: Totals;
 }
 
-function buildLines(receipt: Receipt, opt: GenerateOptions): Lines {
-  const totals = computeTotals(receipt.positions);
+function buildLines(source: Receipt, opt: GenerateOptions): Lines {
   const f = opt.faults;
+  const receipt = f.foreignRates ? { ...source, positions: source.positions.map((pos, i) => ({ ...pos, vat: FOREIGN_RATES[i % FOREIGN_RATES.length] })) } : source;
+  const totals = computeTotals(receipt.positions);
   const rate = (r: number) => {
     const s = formatRate(r, opt.rateStyle);
     return f.rateWithSpace ? s.replace(/^(\d+)/, '$1 ') : s;

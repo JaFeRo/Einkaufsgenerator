@@ -140,6 +140,11 @@ export function About({ spec }: { spec: SpecVersion }) {
             <b>Fehlerkorrektur:</b> immer Q{is13 ? ' (in 1.3 nur empfohlen)' : ''}. Die Zoll-Beispiele nutzen teils L und M; zum Gegentest lässt sich unter „Fehler
             einbauen“ M wählen.
           </li>
+          <li>
+            <b>Steuersatzwerte:</b> Die Regex für P2/M2 lässt jeden Satz mit bis zu zwei Stellen zu. In Deutschland gelten aber nur 7 und 19 % (§ 12 UStG), und die
+            App erwartet einen davon. Der Prüfer meldet andere Sätze, auch 0 %, deshalb als Fehler. Unter „Fehler einbauen“ erzeugt „Fremde Steuersätze“ einen Bon mit
+            8, 13 und 21 % wie Beispiel 6.2 aus Fassung 1.2.
+          </li>
           {is13 ? (
             <li>
               <b>Positionsbrutto:</b> Der Text erlaubt ±50.000, die Regex nur ±50000 ohne Nachkommastellen. „50000,00“ meldet der Prüfer als Fehler mit Hinweis.

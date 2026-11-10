@@ -158,19 +158,6 @@ export const SCENARIOS: Scenario[] = [
     })
   },
   {
-    id: 'fiveRates',
-    label: '5 Steuersätze',
-    description: 'Höchstzahl an M-Zeilen wie Beispiel 6.2',
-    build: (seed) =>
-      base(prng(seed), [
-        p('Nasenspray', 7, 3.5),
-        p('Volvic Tea Zero', 8, 5.94),
-        p('Vollkorntoast', 13, 1.99),
-        p('Sonstige Filme', 19, 16.99, 2),
-        p('Presse Erzeugnisse', 21, 9.8)
-      ])
-  },
-  {
     id: 'kg',
     label: 'Wiegeware',
     description: 'Mengen mit Nachkommastellen, eigene Einheiten',

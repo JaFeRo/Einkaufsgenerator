@@ -10,8 +10,9 @@ describe('Zoll-Beispiele', () => {
     expect(refs(examples.ex61, 'error')).toEqual([]);
     expect(refs(examples.ex61, 'warning')).toEqual(['EBNF']);
   });
-  it('6.2 ist gültig, aber E2/E3 passen nicht zu den M-Zeilen', () => {
-    expect(refs(examples.ex62, 'error')).toEqual([]);
+  it('6.2: 8, 13 und 21 % sind in Deutschland ungültig, E2/E3 passen nicht zu den M-Zeilen', () => {
+    // Je drei M- und P-Zeilen mit 8, 13 und 21 %; sonst ist der Inhalt regelkonform
+    expect(refs(examples.ex62, 'error')).toEqual(['M2', 'M2', 'M2', 'P2', 'P2', 'P2']);
     expect(refs(examples.ex62, 'warning')).toEqual(expect.arrayContaining(['E2', 'E3']));
   });
   it('6.3 Primärcode: Summen weichen ab, Code ist für ECC Q zu groß', () => {
@@ -53,7 +54,7 @@ describe('Parser', () => {
     expect(parseRecord('P;19;1;59,90;1;Stück;"A ""B""; C"')).toEqual(['P', '19', '1', '59,90', '1', 'Stück', 'A "B"; C']);
   });
   it('ignoriert zusätzliche Felder mit Warnung (Toleranzprinzip)', () => {
-    const text = examples.ex62.replace('P;7;1;3,50;1;Stück;Nasenspray', 'P;7;1;3,50;1;Stück;Nasenspray;NEU');
+    const text = examples.ex61.replace('P;19;1;105,20;1;Stück;Cla Multi Int Nuit PTS', 'P;19;1;105,20;1;Stück;Cla Multi Int Nuit PTS;NEU');
     const f = validateCode(text).findings;
     expect(f.filter((x) => x.severity === 'error')).toEqual([]);
     expect(f.some((x) => x.message.includes('unbekannte'))).toBe(true);
@@ -61,5 +62,18 @@ describe('Parser', () => {
   it('erkennt Codes verschiedener Bons', () => {
     const set = validateSet([examples.ex61, examples.ex62]);
     expect(set.findings.some((f) => f.ref === 'K4–K7')).toBe(true);
+  });
+});
+
+describe('Steuersätze', () => {
+  const bon = (rate: string) => `K;1;;7;1770201944;1770201945;119,00\nE;100,00;19,00;-1;-1\nM;${rate};119,00;100,00;19,00\nP;${rate};1;119,00;1;Stück;Test\n`;
+  it('7 und 19 % in jeder Schreibweise sind gültig', () => {
+    for (const r of ['19', '19,00', '7', '7,0']) expect(validateCode(bon(r), { spec: '1.3' }).findings.filter((f) => f.ref === 'P2' || f.ref === 'M2'), r).toEqual([]);
+  });
+  it('andere Sätze sind Fehler, auch 0 %', () => {
+    for (const r of ['0', '16', '21', '8,1']) {
+      const errs = validateCode(bon(r), { spec: '1.3' }).findings.filter((f) => f.severity === 'error').map((f) => f.ref);
+      expect(errs, r).toEqual(expect.arrayContaining(['M2', 'P2']));
+    }
   });
 });

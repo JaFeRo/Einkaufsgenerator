@@ -47,9 +47,9 @@ Der Simulator macht diese Punkte einstellbar (Profil, ECC, Grenze, Steuersatz-Fo
 |---|---|---|
 | Szenario-Chips, Kopfdaten, editierbare Positionen, QR-Profil, Fehlerinjektion | Thermobon 80 mm, TSE-Block, QR-Code(s) mit „1/3“, Stempel „TESTBELEG“ | Status (gültig/Warnung/Fehler), Füllstand je Code, farbiges CSV, Befundliste, entschlüsselte Kopfzeile |
 
-- **Szenarien:** Zoll-Beispiel 6.1, Zufallseinkauf, 5 Steuersätze (wie 6.2), Wiegeware (kg), Grenzfall 50,01 €, Überlauf (mehrere Codes). „Nächster Bon“ würfelt einen neuen Einkauf.
+- **Szenarien:** Zoll-Beispiel 6.1, Zufallseinkauf, Wiegeware (kg), Grenzfall 50,01 €, Überlauf (mehrere Codes). „Nächster Bon“ würfelt einen neuen Einkauf.
 - **Scanmodus:** QR bildschirmfüllend auf Weiß, Pfeiltasten wechseln Teil-Codes – zum Scannen direkt vom Monitor.
-- **Fehler einbauen:** K7 ≠ Summe, Ende vor Start, E-Zeile fehlt, CRLF statt LF, keine Positionen – für Negativtests.
+- **Fehler einbauen:** K7 ≠ Summe, Ende vor Start, E-Zeile fehlt, CRLF statt LF, keine Positionen, fremde Steuersätze (8/13/21 %, fünf M-Zeilen; in Deutschland gelten nur 7 und 19 %) – für Negativtests.
 - **Gestaltung:** kühles Grau-Grün als Tisch, Zollgrün als einziger Akzent, Papierweiß nur für den Bon. Archivo (schmal) für Überschriften, IBM Plex Sans/Mono für UI und Daten, Courier Prime für den Bon. Hell- und Dunkelmodus; der Bon bleibt weiß.
 - Fiktive Händlerdaten und deutlicher Hinweis „Simulation · kein steuerlich gültiger Beleg“.
 

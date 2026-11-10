@@ -44,6 +44,8 @@ export interface Merchant {
 }
 
 export interface Faults {
+  /** Positionen reihum mit 8, 13, 21, 7 und 19 % wie Beispiel 6.2 aus 1.2 (fünf M-Zeilen, in Deutschland ungültige Sätze) */
+  foreignRates?: boolean;
   /** K7 weicht um 1,00 € von der Summe ab */
   totalMismatch?: boolean;
   /** BON_ENDE liegt vor BON_START */

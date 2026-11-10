@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import examples from '../src/dakz/zoll-beispiele.json';
-import { DEFAULT_OPTIONS, SCENARIOS, computeTotals, generate, money, positionGross, utf8Length, validateCode, validateSet } from '../src/dakz';
+import { DEFAULT_OPTIONS, SCENARIOS, computeTotals, generate, money, parseContent, positionGross, utf8Length, validateCode, validateSet } from '../src/dakz';
 
 const scenario = (id: string, seed = 1) => SCENARIOS.find((s) => s.id === id)!.build(seed);
 
@@ -91,4 +91,19 @@ describe('Fehlerinjektion', () => {
   it('meldet CRLF', () => expect(run({ crlf: true }).map((f) => f.ref)).toContain('C3'));
   it('meldet fehlende Positionen', () => expect(run({ noPositions: true }).some((f) => f.severity === 'error')).toBe(true));
   it('meldet Steuersatz mit Leerzeichen', () => expect(run({ rateWithSpace: true }).map((f) => f.ref)).toContain('P2'));
+});
+
+describe('Fehlerinjektion „Fremde Steuersätze“', () => {
+  it('setzt die Sätze reihum, ergibt bis zu fünf M-Zeilen und Fehler bei P2/M2', () => {
+    const r = SCENARIOS.find((x) => x.id === 'overflow')!.build(3);
+    const { codes } = generate(r, { spec: '1.3', faults: { foreignRates: true } });
+    const recs = parseContent(codes[0].text);
+    expect(recs.filter((x) => x[0] === 'M').map((x) => x[1])).toEqual(['7', '8', '13', '19', '21']);
+    expect(recs.filter((x) => x[0] === 'P').slice(0, 5).map((x) => x[1])).toEqual(['8', '13', '21', '7', '19']);
+    const errs = validateCode(codes[0].text, { spec: '1.3' }).findings.filter((f) => f.severity === 'error').map((f) => f.ref);
+    expect(new Set(errs)).toEqual(new Set(['M2', 'P2']));
+  });
+  it('ohne den Fehler erzeugen alle Szenarien nur 7 und 19 %', () => {
+    for (const s of SCENARIOS) for (const c of generate(s.build(5), { spec: '1.3' }).codes) for (const x of parseContent(c.text)) if (x[0] === 'M' || x[0] === 'P') expect(['7', '19'], `${s.id}: ${x.join(';')}`).toContain(x[1]);
+  });
 });
