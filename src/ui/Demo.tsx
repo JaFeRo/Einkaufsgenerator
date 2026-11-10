@@ -199,7 +199,11 @@ export function Demo({ spec, counter, notify, onOpenInBench }: Props) {
     const area = areaRef.current;
     if (!area || area.scrollHeight <= area.clientHeight) return;
     const behavior: ScrollBehavior = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
-    if (!lineCount) return area.scrollTo({ top: 0, behavior });
+    // Kein „return area.scrollTo(…)“: neuere Browser liefern dort einen Promise, den React als Aufräumfunktion aufrufen würde
+    if (!lineCount) {
+      area.scrollTo({ top: 0, behavior });
+      return;
+    }
     const rows = area.querySelectorAll<HTMLElement>('.receipt .pos');
     const target = state.closed ? area.querySelector<HTMLElement>('.qr-block') : rows[rows.length - 1];
     if (!target) return;
