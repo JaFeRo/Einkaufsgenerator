@@ -1,4 +1,5 @@
 import { QR_CAPACITY_Q_BYTES, SPECS, type SpecVersion } from '../dakz';
+import { APP_VERSION } from '../version';
 
 export function About({ spec }: { spec: SpecVersion }) {
   const p = SPECS[spec];
@@ -184,6 +185,7 @@ export function About({ spec }: { spec: SpecVersion }) {
           <li>„Link teilen“ legt den kompletten Bon in die Adresse, damit ein Testfall reproduzierbar bleibt.</li>
           <li>Alle Belege tragen den Aufdruck „TESTBELEG“ und fiktive Händlerdaten. Sie sind keine steuerlich gültigen Belege.</li>
         </ul>
+        <p className="hint">Version {APP_VERSION}</p>
       </section>
     </main>
   );
