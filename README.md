@@ -28,7 +28,8 @@ Alle erzeugten Belege sind Testdaten mit fiktiven Händlerangaben, tragen den Au
 - Sieben fiktive Testhändler mit eigenem Sortiment und Bonkopf (Kaufhaus, Mode, Elektro, Parfümerie, Uhren & Schmuck, Feinkost, Sport)
 - Kasse links: Artikelkacheln mit Kategorie-Filter und Suche, Wiegeware mit Gewichtseingabe, freie Position, Beispieleinkäufe, Warenkorb mit −/+
 - Bon rechts groß und live mitwachsend; der QR-Code erscheint nach „Bon abschließen“ (BON_NR vom gemeinsamen Zähler), Abschluss erst über 50,00 €
-- „QR groß anzeigen“, „Nächster Kunde“, „In Werkbank öffnen“, Vollbild; Tasten: Enter abschließen, Leertaste nächster Kunde, S QR groß, Esc schließen
+- „QR groß anzeigen“, „Nächster Kunde“, „In Werkbank öffnen“, Vollbild; Tasten: Enter abschließen, Leertaste nächster Kunde, S QR groß, +/− Bongröße, 0 Standardgröße, Esc schließen
+- Bongröße mit − / + (25–160 %), „Einpassen“ (ganzer Bon ohne Scrollen sichtbar) und „automatisch“ (passt bei jeder neuen Position neu ein); Hinweis, wenn der QR-Code dabei zum Scannen zu klein wird
 - Eigener Zustand im Browser, unabhängig vom Bon der Werkbank; feste Einstellungen (ECC Q, keine Fehler), Fassung nach dem Umschalter im Kopf
 
 ## Entwicklung

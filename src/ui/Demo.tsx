@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type FormEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import {
   DEFAULT_OPTIONS,
   DEMO_MERCHANTS,
@@ -33,7 +33,28 @@ const DEMO_OPTIONS = { ...DEFAULT_OPTIONS, faults: {} };
 
 const nowSec = () => Math.floor(Date.now() / 1000);
 
-const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName));
+/** Bongröße in der Demo: 100 % = Standard, „Einpassen“ rechnet die Größe passend zur Fensterhöhe aus. */
+const ZOOM_MIN = 0.25;
+const ZOOM_MAX = 1.6;
+const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(z * 100) / 100));
+// Auf das nächste Zehntel springen, auch von einem eingepassten Wert wie 57 %
+const zoomStep = (z: number, dir: 1 | -1) => clampZoom(dir > 0 ? Math.floor(z * 10 + 1e-6) / 10 + 0.1 : Math.ceil(z * 10 - 1e-6) / 10 - 0.1);
+
+interface DemoView {
+  zoom: number;
+  /** Bei jeder Änderung des Bons neu einpassen */
+  auto: boolean;
+}
+
+function loadView(): DemoView {
+  const v = loadJson<Partial<DemoView>>(KEYS.demoView, {});
+  return { zoom: typeof v.zoom === 'number' && Number.isFinite(v.zoom) ? clampZoom(v.zoom) : 1, auto: v.auto === true };
+}
+
+// Kontrollkästchen zählen nicht als Eingabefeld, damit die Kurzbefehle nach einem Klick darauf weiter greifen
+const isTyping = (t: EventTarget | null) =>
+  t instanceof HTMLElement &&
+  (t.isContentEditable || ['TEXTAREA', 'SELECT'].includes(t.tagName) || (t instanceof HTMLInputElement && !['checkbox', 'radio', 'button'].includes(t.type)));
 
 interface Props {
   spec: SpecVersion;
@@ -58,7 +79,24 @@ export function Demo({ spec, counter, notify, onOpenInBench }: Props) {
   const [freeVat, setFreeVat] = useState<7 | 19>(19);
   const [scan, setScan] = useState(false);
   const [presenting, setPresenting] = useState(false);
+  const [view, setView] = useState(loadView);
   const areaRef = useRef<HTMLElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const bonRef = useRef<HTMLDivElement>(null);
+  // Einpassen läuft in wenigen Durchgängen, weil nicht jedes Maß linear mitwächst
+  const fitting = useRef(0);
+  const [fitTick, setFitTick] = useState(0);
+  /** QR-Code auf dem Bildschirm so klein, dass ein Handy ihn schlecht liest */
+  const [smallQr, setSmallQr] = useState(false);
+  const zoom = view.zoom;
+  const fit = () => {
+    fitting.current = 4;
+    setFitTick((t) => t + 1);
+  };
+
+  useEffect(() => {
+    saveJson(KEYS.demoView, view);
+  }, [view]);
 
   // Ein Neuladen während der Präsentation verliert nichts.
   useEffect(() => {
@@ -187,14 +225,62 @@ export function Demo({ spec, counter, notify, onOpenInBench }: Props) {
         setScan(true);
       } else if (e.key === 'Escape' && presenting && !document.fullscreenElement) {
         setPresenting(false);
+      } else if (e.key === '+' || e.key === '=') {
+        setView((v) => ({ ...v, zoom: zoomStep(v.zoom, 1), auto: false }));
+      } else if (e.key === '-') {
+        setView((v) => ({ ...v, zoom: zoomStep(v.zoom, -1), auto: false }));
+      } else if (e.key === '0') {
+        setView({ zoom: 1, auto: false });
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  // Der Bon scrollt mit: neueste Position, nach dem Abschluss der QR-Code
   const lineCount = state.lines.length;
+
+  // Einpassen: Bon so verkleinern oder vergrößern, dass er ohne Scrollen ganz sichtbar ist
+  useLayoutEffect(() => {
+    const area = areaRef.current;
+    const bon = bonRef.current;
+    if (!fitting.current || !area || !bon) return;
+    fitting.current--;
+    const style = getComputedStyle(area);
+    // Platz für den Bon: Höhe des Bereichs ohne Leiste, Hinweise, Abstände und Innenrand (gemessen, nicht geschätzt).
+    // Auf schmalen Bildschirmen scrollt die Seite selbst; unten liegt dort die Leiste mit Summe.
+    const room =
+      style.overflowY === 'auto'
+        ? area.clientHeight - (bon.getBoundingClientRect().top - area.getBoundingClientRect().top + area.scrollTop) - parseFloat(style.paddingBottom) - 2
+        : window.innerHeight - 96 - (toolbarRef.current?.offsetHeight ?? 0) - 24;
+    const height = bon.getBoundingClientRect().height;
+    if (!height || room <= 0) return;
+    const next = clampZoom(Math.floor(((zoom * room) / height) * 100) / 100);
+    if (Math.abs(next - zoom) >= 0.01 && fitting.current > 0) {
+      setView((v) => ({ ...v, zoom: next }));
+    } else {
+      // Fertig: ganz nach oben, damit der komplette Bon im Blick ist
+      fitting.current = 0;
+      area.scrollTo({ top: 0 });
+    }
+  }, [fitTick, zoom]);
+
+  // Unter etwa 2 Bildpunkten je Modul wird das Scannen vom Bildschirm unzuverlässig
+  useLayoutEffect(() => {
+    const svg = bonRef.current?.querySelector('.qr-block svg');
+    const modules = closedBon?.codes[0]?.matrix?.size;
+    setSmallQr(!!svg && !!modules && svg.getBoundingClientRect().width / (modules + 8) < 2);
+  });
+
+  // Automatisch einpassen, wenn der Bon wächst, abgeschlossen wird oder das Fenster sich ändert
+  useEffect(() => {
+    if (!view.auto) return;
+    fit();
+    const onResize = () => fit();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [view.auto, lineCount, state.closed, state.merchantId, presenting]);
+
+  // Der Bon scrollt mit: neueste Position, nach dem Abschluss der QR-Code
   useEffect(() => {
     const area = areaRef.current;
     if (!area || area.scrollHeight <= area.clientHeight) return;
@@ -360,7 +446,7 @@ export function Demo({ spec, counter, notify, onOpenInBench }: Props) {
             )}
           </div>
           <div className="row between">
-            <span className="hint">Enter: abschließen · Leertaste: nächster Kunde · S: QR groß</span>
+            <span className="hint">Enter: abschließen · Leertaste: nächster Kunde · S: QR groß · +/−: Bongröße</span>
             <button className="btn" onClick={togglePresenting}>
               {presenting ? 'Vollbild beenden' : 'Vollbild'}
             </button>
@@ -368,7 +454,40 @@ export function Demo({ spec, counter, notify, onOpenInBench }: Props) {
         </div>
       </section>
 
-      <section className="demo-bon-area" ref={areaRef} aria-label="Kassenbon">
+      <section className="demo-bon-area" ref={areaRef} aria-label="Kassenbon" style={{ '--bon-scale': zoom } as CSSProperties}>
+        <div className="bon-zoom" ref={toolbarRef} role="group" aria-label="Bongröße">
+          <button className="btn" onClick={() => setView((v) => ({ ...v, zoom: zoomStep(v.zoom, -1), auto: false }))} disabled={zoom <= ZOOM_MIN} aria-label="Bon verkleinern" title="Verkleinern (−)">
+            −
+          </button>
+          <span className="mono zoom-val" aria-live="polite">
+            {Math.round(zoom * 100)} %
+          </span>
+          <button className="btn" onClick={() => setView((v) => ({ ...v, zoom: zoomStep(v.zoom, 1), auto: false }))} disabled={zoom >= ZOOM_MAX} aria-label="Bon vergrößern" title="Vergrößern (+)">
+            +
+          </button>
+          <button className="btn" onClick={fit} title="So groß wie möglich, ohne dass der Bon scrollt">
+            Einpassen
+          </button>
+          <label className="check" title="Bei jeder neuen Position und nach dem Abschluss neu einpassen">
+            <input type="checkbox" checked={view.auto} onChange={(e) => setView((v) => ({ ...v, auto: e.target.checked }))} />
+            <span>automatisch</span>
+          </label>
+          {zoom !== 1 && (
+            <button className="link-btn" onClick={() => setView({ zoom: 1, auto: false })} title="Standardgröße (0)">
+              100 %
+            </button>
+          )}
+          {smallQr && (
+            // Schwebt unter der Leiste, damit die eingepasste Höhe gleich bleibt
+            <p className="zoom-hint" role="status">
+              QR-Code bei dieser Größe klein – zum Scannen{' '}
+              <button className="link-btn" onClick={() => setScan(true)}>
+                QR groß anzeigen
+              </button>{' '}
+              (S)
+            </p>
+          )}
+        </div>
         {errors.length > 0 && (
           <div className="demo-alert" role="status">
             Bon nicht konform:{' '}
@@ -378,6 +497,7 @@ export function Demo({ spec, counter, notify, onOpenInBench }: Props) {
               .join(' · ')}
           </div>
         )}
+        <div className="bon-box" ref={bonRef}>
         <Receipt
           receipt={shown}
           merchant={toMerchant(merchant)}
@@ -389,6 +509,7 @@ export function Demo({ spec, counter, notify, onOpenInBench }: Props) {
           footer={merchant.footer}
           pending={open}
         />
+        </div>
       </section>
 
       <div className="demo-bar">
