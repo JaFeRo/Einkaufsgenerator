@@ -22,5 +22,6 @@ export const KEYS = {
   bons: 'dakz.savedBons.v1',
   current: 'dakz.current.v1',
   demo: 'dakz.demo.v1',
-  demoView: 'dakz.demoView.v1'
+  demoView: 'dakz.demoView.v1',
+  scanSize: 'dakz.scanSize.v1'
 } as const;

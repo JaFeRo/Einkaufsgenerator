@@ -1,11 +1,18 @@
 import { useEffect, useState } from 'react';
-import type { CSSProperties } from 'react';
 import { QUIET_MODULES } from '../qr/layout';
 import { QrSvg } from './QrSvg';
-
-/** Gesamtmodule inklusive Ruhezone bei Version 40: Dieser Code füllt den Bildschirm, kleinere bleiben proportional kleiner. */
-const MAX_TOTAL_MODULES = 177 + QUIET_MODULES * 2;
+import { snapModulePx } from './scanTest';
+import { KEYS, loadJson, saveJson } from './storage';
 import type { RenderedBon } from './useCodes';
+import { useViewport } from './useViewport';
+
+/** Gesamtmodule inklusive Ruhezone bei Version 40: Bei „wie Bon“ füllt dieser Code den Bildschirm, kleinere bleiben proportional kleiner. */
+const MAX_TOTAL_MODULES = 177 + QUIET_MODULES * 2;
+/** Platz für Kopf- und Fußleiste */
+const BARS_PX = 150;
+
+/** „füllend“: so groß wie möglich (zum Scannen vom Bildschirm) · „wie Bon“: kleine Codes bleiben kleiner */
+type ScanSize = 'fill' | 'proportional';
 
 interface Props {
   bon: RenderedBon;
@@ -26,6 +33,17 @@ export function ScanOverlay({ bon, bonNr, duplicate, onClose, onNextBon, onRenum
   const [i, setI] = useState(0);
   const idx = Math.min(i, bon.codes.length - 1);
   const c = bon.codes[idx];
+  const [size, setSize] = useState<ScanSize>(() => (loadJson<string>(KEYS.scanSize, 'fill') === 'proportional' ? 'proportional' : 'fill'));
+  const { width, height, dpr } = useViewport();
+  const room = Math.min(width - 32, height - BARS_PX);
+  const total = c.matrix ? c.matrix.size + QUIET_MODULES * 2 : MAX_TOTAL_MODULES;
+  // Ganzzahlige Gerätepixel je Modul: gleich breite Module, kein Moiré im Kamerabild
+  const modulePx = size === 'fill' ? snapModulePx(room, total, dpr) : snapModulePx(Math.min(room, 680) / MAX_TOTAL_MODULES * total, total, dpr);
+  const side = modulePx * total;
+
+  useEffect(() => {
+    saveJson(KEYS.scanSize, size);
+  }, [size]);
 
   useEffect(() => setI(0), [bonNr]);
   useEffect(() => {
@@ -47,11 +65,12 @@ export function ScanOverlay({ bon, bonNr, duplicate, onClose, onNextBon, onRenum
       <div className="bar-top">
         <span>
           <span className="scan-nr">Bon {bonNr}</span> · QR {c.index} von {c.count}
+          {c.matrix && ` · V${c.matrix.version} · ${Number((modulePx * dpr).toFixed(2))} Bildpunkte je Modul`}
           {duplicate && <span style={{ color: '#b83a12' }}> · Bon-Nr. bereits verwendet</span>}
         </span>
         <button onClick={onClose}>Schließen</button>
       </div>
-      <div className="qr-big">{c.matrix ? <QrSvg matrix={c.matrix} label={`QR-Code ${c.index} von ${c.count}`} style={{ '--frac': (c.matrix.size + QUIET_MODULES * 2) / MAX_TOTAL_MODULES } as CSSProperties} /> : <div className="qr-err">{c.qrError}</div>}</div>
+      <div className="qr-big">{c.matrix ? <QrSvg matrix={c.matrix} label={`QR-Code ${c.index} von ${c.count}`} style={{ width: side, height: side }} /> : <div className="qr-err">{c.qrError}</div>}</div>
       <div className="bar-bottom">
         {bon.codes.length > 1 && (
           <>
@@ -63,6 +82,9 @@ export function ScanOverlay({ bon, bonNr, duplicate, onClose, onNextBon, onRenum
             </button>
           </>
         )}
+        <button onClick={() => setSize(size === 'fill' ? 'proportional' : 'fill')} title="Bildschirmfüllend lässt sich vom Monitor am besten scannen; „wie Bon“ zeigt kleine Codes kleiner">
+          Größe: {size === 'fill' ? 'bildschirmfüllend' : 'wie Bon'}
+        </button>
         {onRenumber && <button onClick={onRenumber}>Gleicher Einkauf, neue Nr. (N)</button>}
         <button onClick={onNextBon}>{nextLabel} (Leertaste)</button>
       </div>

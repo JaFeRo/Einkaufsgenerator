@@ -14,7 +14,8 @@ Alle erzeugten Belege sind Testdaten mit fiktiven Händlerangaben, tragen den Au
 - QR-Codes im Byte-Modus (1.2: UTF-8 mit TSE-Daten in E4/E5, 1.3: ISO 8859-1 mit „-1“ in E4/E5) mit Fehlerkorrektur Q; automatische Aufteilung ab 1.663 Byte oder einer selbst gewählten Grenze
 - TSE-Daten zufällig oder als echte ECDSA-Signatur (P-384)
 - Fehler einbauen für Negativtests (Summen, Zeilen, CRLF, Steuersatz-Format, fremde Steuersätze 8/13/21 % mit fünf M-Zeilen, ECC M)
-- Scanmodus: Code groß auf dem Bildschirm (kleinere Codes proportional kleiner), Pfeiltasten für Teilcodes, Leertaste für den nächsten Bon, N für gleichen Einkauf mit neuer Bon-Nr.
+- Scanmodus: Code bildschirmfüllend mit ganzzahligen Bildpunkten je Modul (umschaltbar auf „wie Bon“: kleinere Codes proportional kleiner), Pfeiltasten für Teilcodes, Leertaste für den nächsten Bon, N für gleichen Einkauf mit neuer Bon-Nr.
+- Scan-Test: erst ein einfacher Code „TEST“ als Funktionstest der Kamera, dann gültige Bons mit QR-Version 10, 13, 16, 20, 25 und 30, jeweils bildschirmfüllend und mit eigener BON_NR – zeigt, ob ein Gerät gar keinen Code erkennt oder erst ab einer bestimmten Dichte scheitert
 - QR-Größe wie auf dem echten Bon: feste Modulgröße (3, 4 oder 6 Druckpunkte bei 203 dpi), der Code wird mit dem Inhalt größer und füllt erst ab einer bestimmten Menge die Druckbreite (72 mm bei 80-mm-, 48 mm bei 58-mm-Papier); gilt für Bildschirm und Druck
 - Druck für 58- oder 80-mm-Papier, Export als PNG und TXT, Serie als ZIP, Bon als Link teilen
 

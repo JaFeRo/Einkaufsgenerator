@@ -360,3 +360,9 @@ html.presenting .wrap { max-width: none; padding-top: 12px; }
 .bon-zoom .check input { margin-top: 0; }
 .zoom-hint { position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%); width: max-content; max-width: 100%; margin: 0; z-index: 3;
   font-size: 12px; padding: 5px 10px; border-radius: 8px; background: var(--panel); border: 1px solid var(--warn); box-shadow: var(--shadow); text-align: center; }
+
+/* Scan-Test: bildschirmfüllende Codes mit steigender Version */
+.scan-test .bar-top b { font-weight: 700; }
+.scan-test-info { flex-direction: column; align-items: center; gap: 10px; }
+.scan-test-hint { margin: 0; max-width: 70ch; text-align: center; font-size: 14px; color: #333; }
+.scan-test-nav { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
