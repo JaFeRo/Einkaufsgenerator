@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { QUIET_MODULES } from '../qr/layout';
 import { QrSvg } from './QrSvg';
-import { snapModulePx } from './scanTest';
 import { KEYS, loadJson, saveJson } from './storage';
 import type { RenderedBon } from './useCodes';
-import { useViewport } from './useViewport';
+import { snapModulePx, useViewport } from './useViewport';
 
 /** Gesamtmodule inklusive Ruhezone bei Version 40: Bei „wie Bon“ füllt dieser Code den Bildschirm, kleinere bleiben proportional kleiner. */
 const MAX_TOTAL_MODULES = 177 + QUIET_MODULES * 2;

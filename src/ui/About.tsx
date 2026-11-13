@@ -121,8 +121,9 @@ export function About({ spec }: { spec: SpecVersion }) {
           </table>
         </div>
         <p className="hint">
-          Die Rückprüfung erkennt die Fassung je Bon an E4/E5 und die Kodierung an den Rohbytes. Weicht die Kodierung von der Fassung ab, meldet sie eine Warnung:
-          Die App liest UTF-8 und ISO 8859-1. Ein 1.3-Code erfüllt auch die Feldregeln von 1.2 („-1“ passt auf die TSE-Regex), ein 1.2-Code fällt unter 1.3 an
+          Die Rückprüfung erkennt die Fassung je Bon an E4/E5 und die Kodierung an den Rohbytes. Die App liest nur ISO 8859-1, unter Android
+          wird UTF-8 nicht gelesen: Ein UTF-8-Code mit Umlauten ist unter 1.3 ein Fehler, unter 1.2 eine Warnung; ISO 8859-1 unter 1.2 ist eine Warnung, der Code bleibt lesbar. Reine
+          ASCII-Codes sind in beiden Kodierungen gleich. Ein 1.3-Code erfüllt auch die Feldregeln von 1.2 („-1“ passt auf die TSE-Regex), ein 1.2-Code fällt unter 1.3 an
           E4/E5 durch. Nach Kap. 1.4 (Toleranzprinzip) müssen Leser unbekannte zusätzliche Felder am Zeilenende ignorieren; der Prüfer meldet sie nur als Warnung.
         </p>
       </section>
@@ -161,8 +162,8 @@ export function About({ spec }: { spec: SpecVersion }) {
             </>
           )}
           <li>
-            <b>Zeichenkodierung:</b> Erzeugt wird in der Kodierung der Fassung ({p.charsetLabel}). Die App liest UTF-8 und ISO 8859-1, eine abweichende Kodierung
-            meldet der Prüfer daher als Warnung, nicht als Fehler.
+            <b>Zeichenkodierung:</b> Erzeugt wird in der Kodierung der Fassung ({p.charsetLabel}). Die App liest nur ISO 8859-1 (UTF-8 scheitert unter Android):
+            UTF-8 mit Umlauten meldet der Prüfer unter 1.3 als Fehler, unter 1.2 als Warnung; ISO 8859-1 unter 1.2 als Warnung.
           </li>
           <li>
             <b>Summen:</b> Konsistenzregeln stehen nicht in der Spezifikation. Abweichungen zwischen K7, E2, E3, M- und P-Zeilen meldet der Prüfer als Warnung.

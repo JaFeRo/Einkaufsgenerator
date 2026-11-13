@@ -4,7 +4,6 @@ import { Editor } from './Editor';
 import { Inspector } from './Inspector';
 import { Receipt } from './Receipt';
 import { ScanOverlay } from './ScanOverlay';
-import { ScanTest } from './ScanTest';
 import { sourceLabel } from './sources';
 import type { Action, AppState } from './state';
 import { useBonActions } from './useBonActions';
@@ -24,7 +23,6 @@ export function Generator({ state, dispatch, counter, saved, notify }: Props) {
   const bon = useCodes(state);
   const actions = useBonActions(state, dispatch, counter, saved.bons, notify);
   const [scan, setScan] = useState(false);
-  const [scanTest, setScanTest] = useState(false);
   const { receipt, tseMode } = state;
 
   // Echte Signatur nachziehen, sobald sich signierte Daten ändern.
@@ -70,9 +68,6 @@ export function Generator({ state, dispatch, counter, saved, notify }: Props) {
           <button className="btn" onClick={() => setScan(true)}>
             Scanmodus
           </button>
-          <button className="btn" onClick={() => setScanTest(true)} title="Prüft Schritt für Schritt, ab welcher Codegröße ein Gerät vom Bildschirm nicht mehr liest">
-            Scan-Test
-          </button>
         </div>
         <p className="hint no-print" style={{ textAlign: 'center' }}>
           Quelle: {sourceLabel(state.scenarioId, saved.bons)} · Bon-Nr. <b className="mono">{receipt.bonNr}</b>
@@ -81,7 +76,6 @@ export function Generator({ state, dispatch, counter, saved, notify }: Props) {
         <Receipt receipt={receipt} merchant={state.merchant} bon={bon} paper={state.paper} moduleDots={state.moduleDots} />
       </section>
       <Inspector state={state} dispatch={dispatch} bon={bon} notify={notify} counter={counter} actions={actions} saved={saved} />
-      {scanTest && <ScanTest spec={state.spec} takeBonNr={counter.take} onClose={() => setScanTest(false)} />}
       {scan && (
         <ScanOverlay bon={bon} bonNr={receipt.bonNr} duplicate={actions.duplicate} onClose={() => setScan(false)} onNextBon={() => actions.newBon()} onRenumber={actions.renumber} />
       )}

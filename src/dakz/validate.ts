@@ -160,9 +160,14 @@ export function validateCode(text: string, opts: ValidateOptions = {}): CodeChec
   if (bytes > limit) err(`Inhalt hat ${bytes} Byte, Grenze für einen Code ist ${limit}`, 'Kap. 5');
   if (text.length > profile.maxChars) err(`Mehr als ${profile.maxChars.toLocaleString('de-DE')} Zeichen in einem Code`, 'Kap. 5');
   if (text.length && !text.endsWith('\n')) warn('Letzte Zeile endet ohne LF (EBNF verlangt LF je record)', 'EBNF');
-  if (d && d !== 'ascii' && d !== profile.charset)
-    // Die App liest beide Kodierungen; die Abweichung ist daher eine Warnung, kein Fehler
-    warn(`Zeichenkodierung ${d === 'utf-8' ? 'UTF-8' : 'ISO 8859-1'}, Spezifikation ${spec} verlangt ${profile.charsetLabel} – die ${profile.appName} liest beides`, 'V3/C2');
+  // Die App liest nur ISO 8859-1: UTF-8 mit Umlauten scheitert unter Android, unter 1.3 daher ein Fehler
+  const app = SPECS['1.3'].appName;
+  if (d === 'utf-8') {
+    const msg = `Zeichenkodierung UTF-8 – die ${app} liest nur ISO 8859-1, unter Android wird der Code nicht gelesen`;
+    if (spec === '1.3') err(`${msg} (Spezifikation 1.3 verlangt ISO 8859-1)`, 'V3/C2');
+    else warn(`${msg} (Fassung 1.2 sah noch UTF-8 vor)`, 'V3/C2');
+  } else if (d === 'iso-8859-1' && spec === '1.2')
+    warn(`Zeichenkodierung ISO 8859-1, Spezifikation 1.2 verlangt UTF-8 – die ${app} liest ISO 8859-1, der Code ist lesbar`, 'V3/C2');
   const k = records[0]?.[0] === 'K' ? records[0] : undefined;
   const primary = k?.[1] === '1';
 

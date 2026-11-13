@@ -84,13 +84,23 @@ describe('Fassung 1.3: Prüfung der Dokument-Beispiele', () => {
     return validateCode(d.text, { spec: '1.3', detectedCharset: d.detected });
   };
 
-  it('alle Beispielcodes sind UTF-8 statt ISO 8859-1 (Warnung, die App liest beides), aber fehlerfrei mit LF', () => {
+  it('alle Beispielcodes sind UTF-8 statt ISO 8859-1 (Fehler, die App liest nur ISO 8859-1), sonst fehlerfrei mit LF', () => {
     for (const k of ['abb5', 'abb7', 'abb9'] as const) {
       expect(read(k).detected, k).toBe('utf-8');
       expect(read(k).text, k).not.toContain('\r');
-      expect(refs(check(k), 'error'), k).toEqual([]);
-      expect(refs(check(k), 'warning'), k).toContain('V3/C2');
+      expect(refs(check(k), 'error'), k).toEqual(['V3/C2']);
     }
+  });
+
+  it('Kodierung: UTF-8 unter 1.2 Warnung, ISO 8859-1 unter 1.2 Warnung, ASCII ohne Befund', () => {
+    const text = read('abb5').text;
+    const charsetRefs = (spec: '1.2' | '1.3', detectedCharset: 'utf-8' | 'iso-8859-1' | 'ascii', severity: 'error' | 'warning') =>
+      validateCode(text, { spec, detectedCharset }).findings.filter((f) => f.severity === severity && f.ref === 'V3/C2');
+    expect(charsetRefs('1.2', 'utf-8', 'error')).toEqual([]);
+    expect(charsetRefs('1.2', 'utf-8', 'warning')[0].message).toContain('liest nur ISO 8859-1');
+    expect(charsetRefs('1.2', 'iso-8859-1', 'warning')[0].message).toContain('der Code ist lesbar');
+    expect(charsetRefs('1.3', 'iso-8859-1', 'warning')).toEqual([]);
+    expect(charsetRefs('1.3', 'ascii', 'error')).toEqual([]);
   });
 
   it('Abb. 5 (6.1) entspricht Abb. 4 und wird als 1.3 erkannt', () => {
