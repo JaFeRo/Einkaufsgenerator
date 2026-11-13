@@ -54,3 +54,6 @@ export function formatEpoch(epoch: number, utc: boolean): string {
     : [d.getDate(), d.getMonth() + 1, d.getFullYear(), d.getHours(), d.getMinutes(), d.getSeconds()];
   return `${p(day)}.${p(month)}.${year} ${p(h)}:${p(m)}:${p(s)}`;
 }
+
+/** Kennbuchstabe des Steuersatzes auf dem Bon: A = 19 %, B = 7 %. */
+export const vatLetter = (rate: number): string => (rate === 19 ? 'A' : rate === 7 ? 'B' : `${String(rate).replace('.', ',')}%`);

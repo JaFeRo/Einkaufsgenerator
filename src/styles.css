@@ -366,3 +366,10 @@ html.presenting .wrap { max-width: none; padding-top: 12px; }
 .scan-test-info { flex-direction: column; align-items: center; gap: 10px; }
 .scan-test-hint { margin: 0; max-width: 70ch; text-align: center; font-size: 14px; color: #333; }
 .scan-test-nav { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.printer { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; margin: 4px 0 8px; }
+.printer .pill { white-space: normal; }
+.printer-settings summary { cursor: pointer; font-weight: 600; font-size: 13px; padding: 4px 0; }
+.printer-settings { display: grid; gap: 8px; }
+.printer-settings[open] { padding-bottom: 4px; }
+.printer-settings .field { min-width: 0; flex: 1 1 200px; }
+.printer-settings select { max-width: 100%; }

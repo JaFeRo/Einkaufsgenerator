@@ -18,6 +18,7 @@ Alle erzeugten Belege sind Testdaten mit fiktiven Händlerangaben, tragen den Au
 - Scan-Test: erst ein einfacher Code „TEST“ als Funktionstest der Kamera, dann gültige Bons mit QR-Version 10, 13, 16, 20, 25 und 30, jeweils bildschirmfüllend und mit eigener BON_NR – zeigt, ob ein Gerät gar keinen Code erkennt oder erst ab einer bestimmten Dichte scheitert
 - QR-Größe wie auf dem echten Bon: feste Modulgröße (3, 4 oder 6 Druckpunkte bei 203 dpi), der Code wird mit dem Inhalt größer und füllt erst ab einer bestimmten Menge die Druckbreite (72 mm bei 80-mm-, 48 mm bei 58-mm-Papier); gilt für Bildschirm und Druck
 - Druck für 58- oder 80-mm-Papier, Export als PNG und TXT, Serie als ZIP, Bon als Link teilen
+- Direkt auf einen Bondrucker drucken (Chrome/Edge am Computer): ESC/POS über WebUSB (bekannter Drucker 1FC9:2016 und alle Geräte der USB-Druckerklasse) oder Web Serial (Standard 19200 Baud). QR-Codes als Rasterbild mit der gewählten Modulgröße und genau den Bytes der Fassung (1.3: ISO 8859-1), wahlweise als druckerinterner Befehl (GS ( k); Druckbreite, Zeichentabelle (PC850, PC858, Windows-1252, ASCII) und Schneiden einstellbar; Testdruck; nach dem Neuladen verbindet der Browser das freigegebene Gerät ohne Dialog. Unter Windows belegt der Druckertreiber den USB-Anschluss (seriell drucken oder WinUSB-Treiber installieren). In der Demo erscheint „Bon drucken“, sobald ein Drucker verbunden war
 
 **Rückprüfung**
 - Codes per Kamera, Foto/Screenshot (auch Drag & Drop und Strg+V) oder als Text einlesen
@@ -52,8 +53,9 @@ Die Kamera braucht HTTPS oder `localhost`.
 src/dakz/    Kern ohne UI: Datenmodell, Generator, Validator, Szenarien, Demo-Händler
 src/qr/      QR-Kodierung (qrcode-generator, Byte-Modus, ECC Q)
 src/scan/    QR-Erkennung (zxing-wasm, WASM wird mitgeliefert)
+src/print/   Bondrucker: ESC/POS-Befehle, Bonlayout, WebUSB/Web Serial
 src/ui/      React-Oberfläche
-tests/       Golden-Tests gegen die Zoll-Beispiele, Regex-Grenzwerte, QR-Rundlauf
+tests/       Golden-Tests gegen die Zoll-Beispiele, Regex-Grenzwerte, QR-Rundlauf, Druckdaten (gedruckte QR-Codes zurückgelesen)
 docs/        Plan, Demo-Modus, Auswertung der Spezifikation, Rückfragen an den Autor, Archiv der Spezifikation (docs/spezifikation)
 ```
 

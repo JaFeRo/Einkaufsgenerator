@@ -1,11 +1,10 @@
-import { SPECS, euro, formatEpoch, formatQty, money, positionGross, type Merchant, type Receipt as ReceiptData } from '../dakz';
+import { SPECS, euro, formatEpoch, formatQty, money, positionGross, vatLetter, type Merchant, type Receipt as ReceiptData } from '../dakz';
 import type { CSSProperties } from 'react';
 import { fmtDots, fmtMm, printableMm, qrLayout, type ModuleDots } from '../qr/layout';
 import { QrSvg } from './QrSvg';
 import type { PaperWidth } from './state';
 import type { RenderedBon } from './useCodes';
 
-const vatLetter = (rate: number) => (rate === 19 ? 'A' : rate === 7 ? 'B' : `${String(rate).replace('.', ',')}%`);
 
 interface Props {
   receipt: ReceiptData;

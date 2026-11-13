@@ -20,6 +20,8 @@ import {
   type Receipt as ReceiptData,
   type SpecVersion
 } from '../dakz';
+import { receiptJob } from '../print/receiptJob';
+import { printSettings, printerError, send, usePrinter } from '../print/usePrinter';
 import { DEFAULT_MODULE_DOTS } from '../qr/layout';
 import { MAX_POSITION_CENTS, MIN_GROSS_CENTS, canClose, cartPositions, demoReducer, fitsLimits, latin1Friendly, merchantFromHash, sanitizeDemo, type CartLine } from './demoState';
 import { Receipt } from './Receipt';
@@ -146,6 +148,20 @@ export function Demo({ spec, counter, notify, onOpenInBench }: Props) {
     externalRef: '',
     positions
   };
+  const printer = usePrinter();
+  // Nur zeigen, wenn in der Werkbank schon ein Drucker verbunden wurde
+  const canPrint = !!(printer.printer || printer.prefs.kind);
+  const printClosed = async () => {
+    if (!state.closed || !closedBon) return;
+    const m = toMerchant(merchant);
+    const receipt = state.closed;
+    const ok = await send(
+      () => receiptJob({ receipt, merchant: m, bon: closedBon, moduleDots: DEFAULT_MODULE_DOTS, settings: printSettings(printer.prefs, 80), slogan: merchant.slogan, footer: merchant.footer }),
+      'Bon wird gedruckt'
+    );
+    notify(ok ? 'Bon an den Drucker gesendet' : (printerError() ?? 'Druck fehlgeschlagen'));
+  };
+
   const shownBon: RenderedBon = closedBon ?? { codes: [], totals, ecc: 'Q', errors: 0, warnings: 0, spec, replaced: [] };
 
   const add = (item: DemoItem) => {
@@ -439,6 +455,11 @@ export function Demo({ spec, counter, notify, onOpenInBench }: Props) {
                 <button className="btn big" onClick={() => setScan(true)}>
                   QR groß anzeigen
                 </button>
+                {canPrint && (
+                  <button className="btn big" onClick={printClosed} disabled={!!printer.busy}>
+                    {printer.busy ? 'Druckt …' : 'Bon drucken'}
+                  </button>
+                )}
                 <button className="btn" onClick={() => state.closed && onOpenInBench(state.closed, toMerchant(merchant))}>
                   In Werkbank öffnen
                 </button>

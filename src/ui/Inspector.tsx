@@ -1,8 +1,11 @@
 import { useState, type Dispatch } from 'react';
 import { SPECS, charsetLabel, fieldSpecs, formatEpoch } from '../dakz';
+import { receiptJob } from '../print/receiptJob';
+import { printSettings, send, usePrinter } from '../print/usePrinter';
 import { DOT_MM, MODULE_DOT_CHOICES, fmtDots, fmtMm, qrLayout } from '../qr/layout';
 import { download, qrPng, seriesZip } from './exporting';
 import { CsvView, Findings, StatusPill } from './Findings';
+import { PrinterPanel } from './PrinterPanel';
 import { shareHash, type Action, type AppState } from './state';
 import type { BonActions } from './useBonActions';
 import type { BonCounter } from './useBonCounter';
@@ -80,6 +83,16 @@ export function Inspector({ state, dispatch, bon, notify, counter, actions, save
     bon.codes.forEach((c) =>
       download(new Blob([c.data as BlobPart], { type: `text/plain;charset=${c.charset}` }), `bon-${state.receipt.bonNr}-qr-${c.index}-von-${c.count}.txt`)
     );
+  };
+
+  const { prefs } = usePrinter();
+  const printBon = async () => {
+    const ok = await send(
+      () => receiptJob({ receipt: state.receipt, merchant: state.merchant, bon, moduleDots: state.moduleDots, settings: printSettings(prefs, state.paper) }),
+      `Bon ${state.receipt.bonNr} wird gedruckt`
+    );
+    if (ok) actions.claim();
+    return ok;
   };
 
   const series = async () => {
@@ -176,7 +189,7 @@ export function Inspector({ state, dispatch, bon, notify, counter, actions, save
               window.print();
             }}
           >
-            Drucken
+            Druckdialog
           </button>
         </div>
         <label className="field" style={{ maxWidth: 260 }}>
@@ -198,6 +211,7 @@ export function Inspector({ state, dispatch, bon, notify, counter, actions, save
             {layout.dots < 3 && ' Unter 3 Punkten je Modul wird das Scannen von Thermodruck unsicher.'}
           </p>
         )}
+        <PrinterPanel paper={state.paper} moduleDots={state.moduleDots} onPrintBon={printBon} notify={notify} />
         <div className="row">
           <button className="btn" onClick={pngAll}>
             QR als PNG

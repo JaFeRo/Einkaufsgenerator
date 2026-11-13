@@ -23,5 +23,6 @@ export const KEYS = {
   current: 'dakz.current.v1',
   demo: 'dakz.demo.v1',
   demoView: 'dakz.demoView.v1',
-  scanSize: 'dakz.scanSize.v1'
+  scanSize: 'dakz.scanSize.v1',
+  printer: 'dakz.printer.v1'
 } as const;
