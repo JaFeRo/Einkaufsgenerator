@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DEMO_MERCHANTS, computeTotals, decodeBytes, fakeTse, generate, positionGross, prng, validateCode, type Receipt } from '../src/dakz';
-import { entryId, entryRefundCents, historyApi, isPartial, mergeHistory, parseHistory, refundCents, refundNotes, type HistoryEntry } from '../src/ui/demoHistory';
+import { cleanExported, entryId, entryRefundCents, historyApi, isPartial, mergeHistory, parseHistory, refundCents, refundNotes, splittable, type HistoryEntry } from '../src/ui/demoHistory';
 import { MIN_GROSS_CENTS, canClose, canToggleMonopoly, demoReducer, emptyDemo, monopolyCents, monopolyNotes, monopolyPosition, sanitizeDemo, type DemoState } from '../src/ui/demoState';
 
 const tse = fakeTse(prng(3));
@@ -101,19 +101,42 @@ describe('Erstattung', () => {
       { text: 'Käse', vat: 7, unitPrice: 30, qty: 1, unit: 'Stück', refundable: true },
       { text: 'Verpackung', vat: 19, unitPrice: 10, qty: 1, unit: 'Stück', refundable: false }
     ]);
-    expect(refundCents(r, [0])).toBe(4630);
-    expect(refundCents(r, [1])).toBe(196);
-    expect(refundNotes(refundCents(r, [1]))).toBe(1);
+    const x = (...l: [number, number][]) => l.map(([i, qty]) => ({ i, qty }));
+    expect(refundCents(r, x([0, 1]))).toBe(4630);
+    expect(refundCents(r, x([1, 1]))).toBe(196);
+    expect(refundNotes(refundCents(r, x([1, 1])))).toBe(1);
     expect(refundCents(r, [])).toBe(0);
-    expect(refundCents(r, [2])).toBe(0); // nicht erstattungsfähig bleibt außen vor
-    expect(refundCents(r, null)).toBe(refundCents(r, [0, 1]));
+    expect(refundCents(r, x([2, 1]))).toBe(0); // nicht erstattungsfähig bleibt außen vor
+    expect(refundCents(r, null)).toBe(refundCents(r, x([0, 1], [1, 1])));
     // Vor der Entwertung zählt der ganze Bon, danach die Auswahl
-    expect(entryRefundCents(entry(r, { exported: [1] }))).toBe(refundCents(r));
-    const part = entry(r, { voidedAt: 9, exported: [1] });
+    expect(entryRefundCents(entry(r, { exported: x([1, 1]) }))).toBe(refundCents(r));
+    const part = entry(r, { voidedAt: 9, exported: x([1, 1]) });
     expect(entryRefundCents(part)).toBe(196);
     expect(isPartial(part)).toBe(true);
-    expect(isPartial(entry(r, { voidedAt: 9, exported: [0, 1] }))).toBe(false);
+    expect(isPartial(entry(r, { voidedAt: 9, exported: x([0, 1], [1, 1]) }))).toBe(false);
     expect(isPartial(entry(r, { voidedAt: 9, exported: null }))).toBe(false);
+  });
+
+  it('Stückware teilweise ausführbar, kg und Liter nur ganz', () => {
+    const r = receipt([
+      { text: 'Creme', vat: 19, unitPrice: 30, qty: 3, unit: 'Stück', refundable: true },
+      { text: 'Käse', vat: 7, unitPrice: 66.4, qty: 0.452, unit: 'kg', refundable: true },
+      { text: 'Öl', vat: 19, unitPrice: 12, qty: 2, unit: 'l', refundable: true },
+      { text: 'Uhr', vat: 19, unitPrice: 290, qty: 1, unit: 'Stück', refundable: true }
+    ]);
+    expect(r.positions.map(splittable)).toEqual([true, false, false, false]);
+    // 1 von 3 Cremes: MwSt. aus 30 € brutto
+    expect(refundCents(r, [{ i: 0, qty: 1 }])).toBe(479);
+    expect(refundCents(r, [{ i: 0, qty: 2 }])).toBe(958);
+    const e = entry(r, { voidedAt: 1, exported: [{ i: 0, qty: 2 }, { i: 1, qty: 0.452 }, { i: 2, qty: 2 }, { i: 3, qty: 1 }] });
+    expect(isPartial(e)).toBe(true);
+    // Bereinigen: Stückzahl gerundet und begrenzt, kg und Liter immer ganz, Doppeltes und Ungültiges fällt heraus
+    expect(cleanExported([{ i: 0, qty: 7 }, { i: 1, qty: 0.2 }, { i: 2, qty: 1 }, { i: 0, qty: 1 }, { i: 3, qty: 0 }, { i: 9, qty: 1 }], r.positions)).toEqual([
+      { i: 0, qty: 3 },
+      { i: 1, qty: 0.452 },
+      { i: 2, qty: 2 }
+    ]);
+    expect(cleanExported([{ i: 0, qty: 1.6 }], r.positions)).toEqual([{ i: 0, qty: 2 }]);
   });
 
   it('gemischte Steuersätze wie auf dem Bon je Satz gerechnet', () => {
@@ -130,9 +153,10 @@ describe('Verlauf', () => {
   const b = receipt([{ text: 'B', vat: 7, unitPrice: 70, qty: 1, unit: 'Stück', refundable: true }], '2', now + 100);
 
   it('Auswahl der ausgeführten Positionen wird beim Lesen bereinigt', () => {
+    // Ältere Einträge speichern nur Indizes: die Position gilt dann als ganz ausgeführt
     const [e] = parseHistory([{ ...entry(a), voidedAt: 3, exported: [0, 0, 7, -1, 'x'] }]);
-    expect(e.exported).toEqual([0]);
-    expect(parseHistory([{ ...entry(a), voidedAt: null, exported: [0] }])[0].exported).toBeNull();
+    expect(e.exported).toEqual([{ i: 0, qty: 1 }]);
+    expect(parseHistory([{ ...entry(a), voidedAt: null, exported: [{ i: 0, qty: 1 }] }])[0].exported).toBeNull();
   });
 
   it('liest gespeicherte und exportierte Listen, verwirft Ungültiges und Doppeltes', () => {
@@ -164,8 +188,8 @@ describe('Verlauf', () => {
     historyApi.record({ merchantId: 'kaufhaus', merchantName: 'K', spec: '1.3', monopoly: true, createdAt: 2, receipt: a });
     const read = () => (JSON.parse(historyApi.exportJson()) as { entries: HistoryEntry[] }).entries;
     expect(read()).toHaveLength(1);
-    historyApi.void(entryId(a), [0], 1234);
-    expect(read()[0]).toMatchObject({ voidedAt: 1234, exported: [0] });
+    historyApi.void(entryId(a), [{ i: 0, qty: 1 }], 1234);
+    expect(read()[0]).toMatchObject({ voidedAt: 1234, exported: [{ i: 0, qty: 1 }] });
     historyApi.setNote(entryId(a), 'Pass geprüft');
     historyApi.unvoid(entryId(a));
     expect(read()[0]).toMatchObject({ voidedAt: null, exported: null, note: 'Pass geprüft' });

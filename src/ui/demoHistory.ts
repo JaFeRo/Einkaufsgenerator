@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { computeTotals, demoMerchant, sanitizeReceipt, type Receipt, type SpecVersion } from '../dakz';
+import { computeTotals, demoMerchant, sanitizeReceipt, type Position, type Receipt, type SpecVersion } from '../dakz';
 import { MONOPOLY_CENTS } from './demoState';
 import { KEYS, loadJson, saveJson } from './storage';
 
@@ -21,21 +21,38 @@ export interface HistoryEntry {
   /** Zeitpunkt der Entwertung (ms), null = offen. Entwertet wird immer der ganze Bon. */
   voidedAt: number | null;
   /**
-   * Bei der Entwertung als ausgeführt markierte Positionen (Index in receipt.positions);
-   * null = alle Waren ausgeführt. Nur diese Positionen zählen für die Erstattung.
+   * Bei der Entwertung als ausgeführt markierte Mengen je Position (Index in receipt.positions);
+   * null = alle Waren ausgeführt. Fehlt eine Position, wurde sie nicht ausgeführt.
+   * Stückware kann teilweise ausgeführt sein, andere Einheiten (kg, l …) nur ganz.
    */
-  exported: number[] | null;
+  exported: ExportedQty[] | null;
   note: string;
 }
 
+export interface ExportedQty {
+  i: number;
+  qty: number;
+}
+
 export const entryId = (r: Receipt) => `${r.bonNr}-${r.start}`;
+
+/** Lässt sich die Menge dieser Position stückweise teilen? Nur ganze Stück, nicht kg, Liter usw. */
+export const splittable = (p: Position): boolean => p.unit === 'Stück' && Number.isInteger(p.qty) && p.qty > 1;
+
+/** Ausgeführte Menge einer Position; null = alles ausgeführt */
+export const exportedQty = (exported: ExportedQty[] | null, i: number, p: Position): number => (exported === null ? p.qty : (exported.find((x) => x.i === i)?.qty ?? 0));
 
 /**
  * MwSt. der erstattungsfähigen Positionen in Cent, je Steuersatz gerechnet wie auf dem Bon.
  * Mit `exported` nur die ausgeführten Positionen (Teilausfuhr).
  */
-export const refundCents = (r: Receipt, exported: number[] | null = null): number =>
-  computeTotals(r.positions.filter((p, i) => p.refundable && (exported === null || exported.includes(i)))).vat;
+export const refundCents = (r: Receipt, exported: ExportedQty[] | null = null): number =>
+  computeTotals(
+    r.positions.flatMap((p, i) => {
+      const qty = exportedQty(exported, i, p);
+      return p.refundable && qty > 0 ? [{ ...p, qty }] : [];
+    })
+  ).vat;
 
 /** MwSt.-Anteil einer einzelnen Position in Cent (nur zur Anzeige; die Summe rechnet je Steuersatz) */
 export const positionVatCents = (gross: number, rate: number): number => Math.round((gross * rate) / (100 + rate));
@@ -45,7 +62,25 @@ export const entryRefundCents = (e: HistoryEntry): number => refundCents(e.recei
 
 /** Wurden bei der Entwertung nicht alle erstattungsfähigen Positionen ausgeführt? */
 export const isPartial = (e: HistoryEntry): boolean =>
-  !!e.voidedAt && e.exported !== null && e.receipt.positions.some((p, i) => p.refundable && !e.exported!.includes(i));
+  !!e.voidedAt && e.exported !== null && e.receipt.positions.some((p, i) => p.refundable && exportedQty(e.exported, i, p) < p.qty);
+
+/** Bereinigt eine Auswahl: gültige Indizes, erstattungsfähig, Menge 0 < qty ≤ Bonmenge, Teilmengen nur bei Stückware */
+export function cleanExported(raw: unknown, positions: Position[]): ExportedQty[] {
+  if (!Array.isArray(raw)) return [];
+  const out = new Map<number, number>();
+  for (const v of raw) {
+    // Ältere Einträge speichern nur den Index (ganze Position)
+    const i = typeof v === 'number' ? v : typeof v === 'object' && v !== null ? (v as { i?: unknown }).i : undefined;
+    if (typeof i !== 'number' || !Number.isInteger(i) || i < 0 || i >= positions.length || out.has(i)) continue;
+    const p = positions[i];
+    if (!p.refundable) continue;
+    const want = typeof v === 'number' ? p.qty : (v as { qty?: unknown }).qty;
+    if (typeof want !== 'number' || !(want > 0)) continue;
+    const qty = splittable(p) ? Math.min(p.qty, Math.max(1, Math.round(want))) : p.qty;
+    out.set(i, qty);
+  }
+  return [...out].sort((a, b) => a[0] - b[0]).map(([i, qty]) => ({ i, qty }));
+}
 
 /** Auszahlung in Monopoly-Scheinen (1 Schein = 10 €): kaufmännisch gerundet, bei jeder Erstattung mindestens ein Schein */
 export const refundNotes = (cents: number): number => (cents > 0 ? Math.max(1, Math.round(cents / MONOPOLY_CENTS)) : 0);
@@ -67,7 +102,7 @@ function sanitizeEntry(v: unknown): HistoryEntry | null {
     voidedAt: typeof x.voidedAt === 'number' ? x.voidedAt : null,
     exported:
       typeof x.voidedAt === 'number' && Array.isArray(x.exported)
-        ? [...new Set(x.exported.filter((i): i is number => Number.isInteger(i) && i >= 0 && i < receipt.positions.length))].sort((a, b) => a - b)
+        ? cleanExported(x.exported, receipt.positions)
         : null,
     note: typeof x.note === 'string' ? x.note.slice(0, 500) : ''
   };
@@ -130,9 +165,9 @@ export const historyApi = {
     if (entries.some((x) => x.id === id)) return true;
     return commit([...entries, { ...e, id, voidedAt: null, exported: null, note: '' }]);
   },
-  /** Ganzen Bon entwerten; `exported` = ausgeführte Positionen, null = alle */
-  void(id: string, exported: number[] | null, now = Date.now()): boolean {
-    return commit(entries.map((e) => (e.id === id ? { ...e, voidedAt: now, exported: exported ? [...exported].sort((a, b) => a - b) : null } : e)));
+  /** Ganzen Bon entwerten; `exported` = ausgeführte Mengen je Position, null = alles */
+  void(id: string, exported: ExportedQty[] | null, now = Date.now()): boolean {
+    return commit(entries.map((e) => (e.id === id ? { ...e, voidedAt: now, exported: exported ? cleanExported(exported, e.receipt.positions) : null } : e)));
   },
   unvoid(id: string): boolean {
     return commit(entries.map((e) => (e.id === id ? { ...e, voidedAt: null, exported: null } : e)));

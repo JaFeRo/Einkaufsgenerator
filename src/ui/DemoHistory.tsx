@@ -3,7 +3,7 @@ import { DEMO_MERCHANTS, computeTotals, demoMerchant, euro, formatQty, money, po
 import { receiptJob } from '../print/receiptJob';
 import { printSettings, printerError, send, usePrinter } from '../print/usePrinter';
 import { DEFAULT_MODULE_DOTS } from '../qr/layout';
-import { entryRefundCents, historyApi, isPartial, parseHistory, positionVatCents, refundCents, refundNotes, useHistory, type HistoryEntry } from './demoHistory';
+import { entryRefundCents, exportedQty, historyApi, isPartial, parseHistory, positionVatCents, refundCents, refundNotes, splittable, useHistory, type ExportedQty, type HistoryEntry } from './demoHistory';
 import { DEMO_OPTIONS, MONOPOLY_CENTS, monopolyNotes } from './demoState';
 import { download } from './exporting';
 import { Receipt } from './Receipt';
@@ -71,7 +71,7 @@ export function DemoHistory({ onClose, notify }: Props) {
   const saved = (ok: boolean) => {
     if (!ok) notify('Browser-Speicher voll: bitte den Verlauf exportieren und anschließend leeren');
   };
-  const voidEntry = (e: HistoryEntry, exported: number[] | null) => {
+  const voidEntry = (e: HistoryEntry, exported: ExportedQty[] | null) => {
     saved(historyApi.void(e.id, exported));
     notify(`Bon ${e.receipt.bonNr} entwertet${exported ? ' (teilweise ausgeführt)' : ''}`);
   };
@@ -222,7 +222,7 @@ function HistoryRow({ entry, active, onOpen }: { entry: HistoryEntry; active: bo
 interface DetailProps {
   entry: HistoryEntry;
   onBack: () => void;
-  onVoid: (exported: number[] | null) => void;
+  onVoid: (exported: ExportedQty[] | null) => void;
   onUnvoid: () => void;
   onScan: () => void;
   notify: (m: string) => void;
@@ -245,7 +245,10 @@ function HistoryDetail({ entry, onBack, onVoid, onUnvoid, onScan, notify, onSave
   const positions = entry.receipt.positions;
   const refundable = positions.map((p, i) => (p.refundable ? i : -1)).filter((i) => i >= 0);
   const [partial, setPartial] = useState(false);
-  const [picked, setPicked] = useState<number[]>(refundable);
+  // Ausgeführte Menge je erstattungsfähiger Position; anfangs alles
+  const full = () => Object.fromEntries(refundable.map((i) => [i, positions[i].qty])) as Record<number, number>;
+  const [qtys, setQtys] = useState<Record<number, number>>(full);
+  const picked: ExportedQty[] = refundable.filter((i) => (qtys[i] ?? 0) > 0).map((i) => ({ i, qty: qtys[i] }));
   const dm = demoMerchant(entry.merchantId) ?? DEMO_MERCHANTS[0];
   const merchant = toMerchant(dm);
   const bon = useMemo(() => renderBon({ receipt: entry.receipt, options: DEMO_OPTIONS, eccOverride: null, spec: entry.spec }), [entry.receipt, entry.spec]);
@@ -256,7 +259,7 @@ function HistoryDetail({ entry, onBack, onVoid, onUnvoid, onScan, notify, onSave
   // Vor der Entwertung: Empfehlung für die Auswahl; danach: was bei der Entwertung festgehalten wurde
   const exported = voided ? entry.exported : partial ? picked : null;
   const cents = refundCents(entry.receipt, exported);
-  const isExported = (i: number) => exported === null || exported.includes(i);
+  const doneQty = (i: number) => exportedQty(exported, i, positions[i]);
 
   const print = async () => {
     const ok = await send(
@@ -274,13 +277,15 @@ function HistoryDetail({ entry, onBack, onVoid, onUnvoid, onScan, notify, onSave
     onRemoved();
     notify(`Bon ${entry.receipt.bonNr} aus dem Verlauf gelöscht`);
   };
-  const toggle = (i: number) => setPicked((x) => (x.includes(i) ? x.filter((y) => y !== i) : [...x, i].sort((a, b) => a - b)));
+  const setQty = (i: number, qty: number) => setQtys((x) => ({ ...x, [i]: Math.max(0, Math.min(positions[i].qty, qty)) }));
   const confirmVoid = () => {
-    // Alles angehakt zählt als „alle Waren ausgeführt“
-    const all = !partial || refundable.every((i) => picked.includes(i));
+    // Alles in voller Menge zählt als „alle Waren ausgeführt“
+    const all = !partial || refundable.every((i) => qtys[i] === positions[i].qty);
     onVoid(all ? null : picked);
     setPartial(false);
   };
+  // „1 von 2 Stück“ nur bei teilbarer Stückware, sonst die Menge vom Bon
+  const qtyLabel = (p: (typeof positions)[number], q: number) => (splittable(p) ? `${formatQty(q)} von ${formatQty(p.qty)} ${p.unit}` : `${formatQty(p.qty)} ${p.unit}${q ? '' : ', nicht ausgeführt'}`);
   const partialDone = voided && isPartial(entry);
 
   return (
@@ -312,38 +317,55 @@ function HistoryDetail({ entry, onBack, onVoid, onUnvoid, onScan, notify, onSave
           </div>
           {partial && (
             <>
-              <p className="hint">Positionen anhaken, die der Kunde ausgeführt hat. Der Bon wird trotzdem als Ganzes entwertet.</p>
+              <p className="hint">
+                Anhaken, was der Kunde ausgeführt hat. Bei Stückware lässt sich die Menge mit − / + verringern; Ware nach Gewicht oder Volumen zählt ganz oder gar nicht. Der Bon wird
+                trotzdem als Ganzes entwertet.
+              </p>
               <ul className="void-positions">
                 {positions.map((p, i) => {
-                  const gross = positionGross(p);
+                  const q = p.refundable ? (qtys[i] ?? 0) : 0;
+                  const gross = positionGross({ ...p, qty: q });
                   return (
-                    <li key={i} className={p.refundable ? '' : 'na'}>
+                    <li key={i} className={p.refundable ? (q < p.qty ? 'less' : '') : 'na'}>
                       <label className="check">
-                        <input type="checkbox" checked={p.refundable && picked.includes(i)} disabled={!p.refundable} onChange={() => toggle(i)} />
+                        <input type="checkbox" checked={q > 0} disabled={!p.refundable} onChange={(e) => setQty(i, e.target.checked ? p.qty : 0)} aria-label={`${p.text} ausgeführt`} />
                         <span>
                           {p.text}
                           <small>
-                            {formatQty(p.qty)} {p.unit} · {money(gross)} € · {p.refundable ? `MwSt. ${p.vat} %: ${money(positionVatCents(gross, p.vat))} €` : 'nicht erstattungsfähig'}
+                            {p.refundable
+                              ? `${qtyLabel(p, q)} · ${money(gross)} € · MwSt. ${p.vat} %: ${money(positionVatCents(gross, p.vat))} €`
+                              : `${formatQty(p.qty)} ${p.unit} · ${money(positionGross(p))} € · nicht erstattungsfähig`}
                           </small>
                         </span>
                       </label>
+                      {p.refundable && splittable(p) && (
+                        <span className="qty">
+                          <button aria-label={`${p.text}: ein Stück weniger ausgeführt`} onClick={() => setQty(i, q - 1)} disabled={q <= 0}>
+                            −
+                          </button>
+                          <span className="mono">{q}</span>
+                          <button aria-label={`${p.text}: ein Stück mehr ausgeführt`} onClick={() => setQty(i, q + 1)} disabled={q >= p.qty}>
+                            +
+                          </button>
+                        </span>
+                      )}
                     </li>
                   );
                 })}
               </ul>
               <div className="row">
-                <button className="link-btn" onClick={() => setPicked(refundable)}>
-                  alle
+                <button className="link-btn" onClick={() => setQtys(full())}>
+                  alles
                 </button>
-                <button className="link-btn" onClick={() => setPicked([])}>
-                  keine
+                <button className="link-btn" onClick={() => setQtys({})}>
+                  nichts
                 </button>
               </div>
             </>
           )}
           <RefundBox
             cents={cents}
-            title={partial ? `Empfohlene Erstattung für ${picked.length} von ${refundable.length} Position${refundable.length === 1 ? '' : 'en'}` : 'Empfohlene Erstattung (MwSt. der erstattungsfähigen Positionen)'}
+            title={partial ? `Empfohlene Erstattung für die ausgeführte Ware (${picked.length} von ${refundable.length} Position${refundable.length === 1 ? '' : 'en'})` : 'Empfohlene Erstattung (MwSt. der erstattungsfähigen Positionen)'}
           />
           {nonRefundable > 0 && (
             <p className="hint">
@@ -361,17 +383,27 @@ function HistoryDetail({ entry, onBack, onVoid, onUnvoid, onScan, notify, onSave
           <RefundBox cents={cents} title={partialDone ? 'Erstattung für die ausgeführten Positionen' : 'Erstattung (alle Waren ausgeführt)'} />
           {partialDone && (
             <ul className="void-positions done">
-              {positions.map((p, i) => (
-                <li key={i} className={!p.refundable ? 'na' : isExported(i) ? 'yes' : 'no'}>
-                  <span aria-hidden="true">{!p.refundable ? '–' : isExported(i) ? '✓' : '✗'}</span>
-                  <span>
-                    <span className="pos-name">{p.text}</span>
-                    <small>
-                      {money(positionGross(p))} € · {!p.refundable ? 'nicht erstattungsfähig' : isExported(i) ? 'ausgeführt' : 'nicht ausgeführt, keine Erstattung'}
-                    </small>
-                  </span>
-                </li>
-              ))}
+              {positions.map((p, i) => {
+                const q = doneQty(i);
+                const state = !p.refundable ? 'na' : q >= p.qty ? 'yes' : q > 0 ? 'some' : 'no';
+                return (
+                  <li key={i} className={state}>
+                    <span aria-hidden="true">{{ na: '–', yes: '✓', some: '◐', no: '✗' }[state]}</span>
+                    <span>
+                      <span className="pos-name">{p.text}</span>
+                      <small>
+                        {state === 'na'
+                          ? `${money(positionGross(p))} € · nicht erstattungsfähig`
+                          : state === 'yes'
+                            ? `${money(positionGross(p))} € · ausgeführt`
+                            : state === 'some'
+                              ? `${qtyLabel(p, q)} ausgeführt · ${money(positionGross({ ...p, qty: q }))} € von ${money(positionGross(p))} €`
+                              : `${money(positionGross(p))} € · nicht ausgeführt, keine Erstattung`}
+                      </small>
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </>

@@ -442,3 +442,12 @@ html.presenting .wrap { max-width: none; padding-top: 12px; }
 .void-positions.done li.no > span:first-child { color: var(--err); }
 .void-positions.done li.no .pos-name { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--err) 60%, transparent); }
 .void-panel .btn.big { white-space: normal; }
+.void-positions li { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.void-positions li .check { flex: 1; min-width: 0; }
+.void-positions li.less { box-shadow: inset 3px 0 0 var(--warn); }
+.void-positions .qty { display: flex; align-items: center; gap: 2px; flex: none; }
+.void-positions .qty button { min-width: 40px; min-height: 40px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 8px; font-size: 18px; line-height: 1; cursor: pointer; }
+.void-positions .qty button:disabled { opacity: 0.4; cursor: default; }
+.void-positions .qty .mono { min-width: 2em; text-align: center; }
+.void-positions.done li { justify-content: flex-start; }
+.void-positions.done li.some > span:first-child { color: var(--warn); }
