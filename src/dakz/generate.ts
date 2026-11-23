@@ -5,7 +5,7 @@ import type { GenerateOptions, GenerateResult, Position, Receipt, Totals } from 
 /** Version 40, ECC Q, Byte-Modus: 1.663 Byte (siehe docs/PLAN.md, Abschnitt 2). */
 export const QR_CAPACITY_Q_BYTES = 1663;
 
-/** In Deutschland gültige Steuersätze (§ 12 Abs. 1 und 2 UStG); die App erwartet einen davon. */
+/** In Deutschland gültige Steuersätze (§ 12 Abs. 1 und 2 UStG). */
 export const DE_VAT_RATES = [7, 19];
 /** Fehlerinjektion „Fremde Steuersätze“: beginnt mit einem ungültigen Satz, damit schon ein Artikel genügt */
 export const FOREIGN_RATES = [8, 13, 21, 7, 19];
