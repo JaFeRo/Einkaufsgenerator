@@ -18,15 +18,34 @@ export interface HistoryEntry {
   /** Zeitpunkt des Abschlusses (ms) */
   createdAt: number;
   receipt: Receipt;
-  /** Zeitpunkt der Entwertung (ms), null = offen */
+  /** Zeitpunkt der Entwertung (ms), null = offen. Entwertet wird immer der ganze Bon. */
   voidedAt: number | null;
+  /**
+   * Bei der Entwertung als ausgeführt markierte Positionen (Index in receipt.positions);
+   * null = alle Waren ausgeführt. Nur diese Positionen zählen für die Erstattung.
+   */
+  exported: number[] | null;
   note: string;
 }
 
 export const entryId = (r: Receipt) => `${r.bonNr}-${r.start}`;
 
-/** MwSt. der erstattungsfähigen Positionen in Cent (exakt wie auf dem Bon je Steuersatz gerechnet) */
-export const refundCents = (r: Receipt): number => computeTotals(r.positions.filter((p) => p.refundable)).vat;
+/**
+ * MwSt. der erstattungsfähigen Positionen in Cent, je Steuersatz gerechnet wie auf dem Bon.
+ * Mit `exported` nur die ausgeführten Positionen (Teilausfuhr).
+ */
+export const refundCents = (r: Receipt, exported: number[] | null = null): number =>
+  computeTotals(r.positions.filter((p, i) => p.refundable && (exported === null || exported.includes(i)))).vat;
+
+/** MwSt.-Anteil einer einzelnen Position in Cent (nur zur Anzeige; die Summe rechnet je Steuersatz) */
+export const positionVatCents = (gross: number, rate: number): number => Math.round((gross * rate) / (100 + rate));
+
+/** Erstattung eines Eintrags: nach der Entwertung für die ausgeführten Positionen, vorher für alle */
+export const entryRefundCents = (e: HistoryEntry): number => refundCents(e.receipt, e.voidedAt ? e.exported : null);
+
+/** Wurden bei der Entwertung nicht alle erstattungsfähigen Positionen ausgeführt? */
+export const isPartial = (e: HistoryEntry): boolean =>
+  !!e.voidedAt && e.exported !== null && e.receipt.positions.some((p, i) => p.refundable && !e.exported!.includes(i));
 
 /** Auszahlung in Monopoly-Scheinen (1 Schein = 10 €): kaufmännisch gerundet, bei jeder Erstattung mindestens ein Schein */
 export const refundNotes = (cents: number): number => (cents > 0 ? Math.max(1, Math.round(cents / MONOPOLY_CENTS)) : 0);
@@ -46,6 +65,10 @@ function sanitizeEntry(v: unknown): HistoryEntry | null {
     createdAt: typeof x.createdAt === 'number' ? x.createdAt : receipt.end * 1000,
     receipt,
     voidedAt: typeof x.voidedAt === 'number' ? x.voidedAt : null,
+    exported:
+      typeof x.voidedAt === 'number' && Array.isArray(x.exported)
+        ? [...new Set(x.exported.filter((i): i is number => Number.isInteger(i) && i >= 0 && i < receipt.positions.length))].sort((a, b) => a - b)
+        : null,
     note: typeof x.note === 'string' ? x.note.slice(0, 500) : ''
   };
 }
@@ -72,7 +95,7 @@ export function mergeHistory(current: HistoryEntry[], incoming: HistoryEntry[]):
       map.set(e.id, e);
       added++;
     } else if (e.voidedAt && !have.voidedAt) {
-      map.set(e.id, { ...have, voidedAt: e.voidedAt, note: have.note || e.note });
+      map.set(e.id, { ...have, voidedAt: e.voidedAt, exported: e.exported, note: have.note || e.note });
       updated++;
     }
   }
@@ -102,13 +125,17 @@ if (typeof window !== 'undefined')
 
 export const historyApi = {
   /** Neuer Eintrag nach „Bon abschließen“; ein schon bekannter Bon wird nicht doppelt erfasst. */
-  record(e: Omit<HistoryEntry, 'id' | 'voidedAt' | 'note'>): boolean {
+  record(e: Omit<HistoryEntry, 'id' | 'voidedAt' | 'exported' | 'note'>): boolean {
     const id = entryId(e.receipt);
     if (entries.some((x) => x.id === id)) return true;
-    return commit([...entries, { ...e, id, voidedAt: null, note: '' }]);
+    return commit([...entries, { ...e, id, voidedAt: null, exported: null, note: '' }]);
   },
-  setVoided(id: string, voided: boolean, now = Date.now()): boolean {
-    return commit(entries.map((e) => (e.id === id ? { ...e, voidedAt: voided ? now : null } : e)));
+  /** Ganzen Bon entwerten; `exported` = ausgeführte Positionen, null = alle */
+  void(id: string, exported: number[] | null, now = Date.now()): boolean {
+    return commit(entries.map((e) => (e.id === id ? { ...e, voidedAt: now, exported: exported ? [...exported].sort((a, b) => a - b) : null } : e)));
+  },
+  unvoid(id: string): boolean {
+    return commit(entries.map((e) => (e.id === id ? { ...e, voidedAt: null, exported: null } : e)));
   },
   setNote(id: string, note: string): boolean {
     return commit(entries.map((e) => (e.id === id ? { ...e, note: note.slice(0, 500) } : e)));

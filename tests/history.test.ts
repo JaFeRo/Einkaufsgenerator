@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DEMO_MERCHANTS, computeTotals, decodeBytes, fakeTse, generate, positionGross, prng, validateCode, type Receipt } from '../src/dakz';
-import { entryId, historyApi, mergeHistory, parseHistory, refundCents, refundNotes, type HistoryEntry } from '../src/ui/demoHistory';
+import { entryId, entryRefundCents, historyApi, isPartial, mergeHistory, parseHistory, refundCents, refundNotes, type HistoryEntry } from '../src/ui/demoHistory';
 import { MIN_GROSS_CENTS, canClose, canToggleMonopoly, demoReducer, emptyDemo, monopolyCents, monopolyNotes, monopolyPosition, sanitizeDemo, type DemoState } from '../src/ui/demoState';
 
 const tse = fakeTse(prng(3));
@@ -75,6 +75,7 @@ const entry = (r: Receipt, extra: Partial<HistoryEntry> = {}): HistoryEntry => (
   createdAt: r.end * 1000,
   receipt: r,
   voidedAt: null,
+  exported: null,
   note: '',
   ...extra
 });
@@ -94,6 +95,27 @@ describe('Erstattung', () => {
     expect(refundCents(receipt([{ text: 'Service', vat: 19, unitPrice: 80, qty: 1, unit: 'Stück', refundable: false }]))).toBe(0);
   });
 
+  it('Teilausfuhr: nur die ausgeführten Positionen zählen', () => {
+    const r = receipt([
+      { text: 'Uhr', vat: 19, unitPrice: 290, qty: 1, unit: 'Stück', refundable: true },
+      { text: 'Käse', vat: 7, unitPrice: 30, qty: 1, unit: 'Stück', refundable: true },
+      { text: 'Verpackung', vat: 19, unitPrice: 10, qty: 1, unit: 'Stück', refundable: false }
+    ]);
+    expect(refundCents(r, [0])).toBe(4630);
+    expect(refundCents(r, [1])).toBe(196);
+    expect(refundNotes(refundCents(r, [1]))).toBe(1);
+    expect(refundCents(r, [])).toBe(0);
+    expect(refundCents(r, [2])).toBe(0); // nicht erstattungsfähig bleibt außen vor
+    expect(refundCents(r, null)).toBe(refundCents(r, [0, 1]));
+    // Vor der Entwertung zählt der ganze Bon, danach die Auswahl
+    expect(entryRefundCents(entry(r, { exported: [1] }))).toBe(refundCents(r));
+    const part = entry(r, { voidedAt: 9, exported: [1] });
+    expect(entryRefundCents(part)).toBe(196);
+    expect(isPartial(part)).toBe(true);
+    expect(isPartial(entry(r, { voidedAt: 9, exported: [0, 1] }))).toBe(false);
+    expect(isPartial(entry(r, { voidedAt: 9, exported: null }))).toBe(false);
+  });
+
   it('gemischte Steuersätze wie auf dem Bon je Satz gerechnet', () => {
     const r = receipt([
       { text: 'A', vat: 19, unitPrice: 100, qty: 1, unit: 'Stück', refundable: true },
@@ -106,6 +128,12 @@ describe('Erstattung', () => {
 describe('Verlauf', () => {
   const a = receipt([{ text: 'A', vat: 19, unitPrice: 60, qty: 1, unit: 'Stück', refundable: true }], '1');
   const b = receipt([{ text: 'B', vat: 7, unitPrice: 70, qty: 1, unit: 'Stück', refundable: true }], '2', now + 100);
+
+  it('Auswahl der ausgeführten Positionen wird beim Lesen bereinigt', () => {
+    const [e] = parseHistory([{ ...entry(a), voidedAt: 3, exported: [0, 0, 7, -1, 'x'] }]);
+    expect(e.exported).toEqual([0]);
+    expect(parseHistory([{ ...entry(a), voidedAt: null, exported: [0] }])[0].exported).toBeNull();
+  });
 
   it('liest gespeicherte und exportierte Listen, verwirft Ungültiges und Doppeltes', () => {
     const list = parseHistory({ entries: [entry(b), entry(a), { foo: 1 }, entry(a), null] });
@@ -124,6 +152,8 @@ describe('Verlauf', () => {
     const r = mergeHistory(cur, [entry(a, { voidedAt: 5, note: 'dort' }), entry(b)]);
     expect([r.added, r.updated]).toEqual([1, 1]);
     expect(r.entries[0]).toMatchObject({ voidedAt: 5, note: 'hier' });
+    const p = mergeHistory([entry(a)], [entry(a, { voidedAt: 7, exported: [] })]);
+    expect(p.entries[0]).toMatchObject({ voidedAt: 7, exported: [] });
     expect(mergeHistory(r.entries, [entry(a)]).entries[0].voidedAt).toBe(5);
   });
 
@@ -134,11 +164,13 @@ describe('Verlauf', () => {
     historyApi.record({ merchantId: 'kaufhaus', merchantName: 'K', spec: '1.3', monopoly: true, createdAt: 2, receipt: a });
     const read = () => (JSON.parse(historyApi.exportJson()) as { entries: HistoryEntry[] }).entries;
     expect(read()).toHaveLength(1);
-    historyApi.setVoided(entryId(a), true, 1234);
-    expect(read()[0].voidedAt).toBe(1234);
+    historyApi.void(entryId(a), [0], 1234);
+    expect(read()[0]).toMatchObject({ voidedAt: 1234, exported: [0] });
     historyApi.setNote(entryId(a), 'Pass geprüft');
-    historyApi.setVoided(entryId(a), false);
-    expect(read()[0]).toMatchObject({ voidedAt: null, note: 'Pass geprüft' });
+    historyApi.unvoid(entryId(a));
+    expect(read()[0]).toMatchObject({ voidedAt: null, exported: null, note: 'Pass geprüft' });
+    historyApi.void(entryId(a), null, 99);
+    expect(read()[0]).toMatchObject({ voidedAt: 99, exported: null });
     expect(parseHistory(JSON.parse(historyApi.exportJson()))).toHaveLength(1);
     historyApi.remove(entryId(a));
     expect(read()).toEqual([]);

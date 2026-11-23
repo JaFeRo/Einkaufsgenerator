@@ -19,7 +19,7 @@ interface Props {
   footer?: string[];
   /** Bon noch offen: keine Bon-Nr., keine TSE-Daten, Platzhalter statt QR-Code */
   pending?: boolean;
-  /** Entwertet: Stempel mit diesem Text (z. B. Datum der Entwertung) */
+  /** Entwertet: Stempel mit diesem Text (z. B. Datum der Entwertung); „ · “ trennt Zeilen */
   voided?: string;
 }
 
@@ -37,7 +37,9 @@ export function Receipt({ receipt, merchant, bon, paper, moduleDots, variant, sl
       {voided && (
         <div className="stamp voided" role="note">
           ENTWERTET
-          <small>{voided}</small>
+          {voided.split(' · ').map((l) => (
+            <small key={l}>{l}</small>
+          ))}
         </div>
       )}
       <div className="c b big">{merchant.name}</div>

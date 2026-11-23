@@ -429,3 +429,16 @@ html.presenting .wrap { max-width: none; padding-top: 12px; }
   .history-row { flex-wrap: wrap; padding-right: 4px; }
   .h-status { margin-left: auto; padding: 0 6px 6px; }
 }
+.void-panel { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.void-panel h4 { margin: 0; font-size: 15px; }
+.void-panel .seg { flex-wrap: wrap; }
+.void-positions { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.void-positions li { padding: 6px 8px; border-radius: 8px; background: var(--desk); }
+.void-positions li.na { opacity: 0.6; }
+.void-positions small { display: block; color: var(--muted); font-size: 12px; }
+.void-positions.done li { display: flex; gap: 10px; align-items: baseline; }
+.void-positions.done li > span:first-child { font-weight: 700; width: 1em; text-align: center; }
+.void-positions.done li.yes > span:first-child { color: var(--ok); }
+.void-positions.done li.no > span:first-child { color: var(--err); }
+.void-positions.done li.no .pos-name { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--err) 60%, transparent); }
+.void-panel .btn.big { white-space: normal; }
