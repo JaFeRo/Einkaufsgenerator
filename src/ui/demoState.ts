@@ -1,4 +1,7 @@
-import { DEFAULT_DEMO_MERCHANT, computeTotals, demoMerchant, demoPosition, positionGross, sanitizeReceipt, type DemoItem, type Position, type Receipt } from '../dakz';
+import { DEFAULT_DEMO_MERCHANT, DEFAULT_OPTIONS, computeTotals, demoMerchant, demoPosition, positionGross, sanitizeReceipt, type DemoItem, type Position, type Receipt } from '../dakz';
+
+/** Feste Einstellungen der Demo: ECC Q, keine Fehlerinjektion, Standardgrenze. */
+export const DEMO_OPTIONS = { ...DEFAULT_OPTIONS, faults: {} };
 
 /** Kleinster Bonbetrag, der als UMS_BRUTTO zulässig ist (K7 echt größer 50,00 €). */
 export const MIN_GROSS_CENTS = 5001;
@@ -9,6 +12,22 @@ export const MAX_POSITION_CENTS = 4999999;
 
 /** Passt die Position mit dieser Menge noch in die Grenzen von P4 und P5? */
 export const fitsLimits = (p: Position, qty: number): boolean => qty > 0 && qty <= MAX_QTY && Math.abs(positionGross({ ...p, qty })) <= MAX_POSITION_CENTS;
+
+/** Monopoly-Geld in der Vorführung: ein Schein „1“ gilt als 10 € */
+export const MONOPOLY_CENTS = 1000;
+/** Kaufmännisch auf ganze Monopoly-Scheine runden, mindestens einer */
+export const monopolyCents = (cents: number): number => Math.max(MONOPOLY_CENTS, Math.round(cents / MONOPOLY_CENTS) * MONOPOLY_CENTS);
+/** Betrag in Monopoly-Scheinen, kaufmännisch gerundet */
+export const monopolyNotes = (cents: number): number => Math.round(cents / MONOPOLY_CENTS);
+
+/**
+ * Preis einer Position auf volle 10 € runden: Stückware über den Stückpreis, Wiegeware und andere
+ * Mengen über den Positionsbetrag (der Preis je kg ergibt sich daraus).
+ */
+export function monopolyPosition(p: Position): Position {
+  if (p.unit === 'Stück' && Number.isInteger(p.qty)) return { ...p, unitPrice: monopolyCents(Math.round(p.unitPrice * 100)) / 100 };
+  return { ...p, unitPrice: monopolyCents(positionGross(p)) / 100 / p.qty };
+}
 
 export interface CartLine {
   id: number;
@@ -25,6 +44,8 @@ export interface DemoState {
   /** Abgeschlossener Bon; solange gesetzt, ist der Warenkorb gesperrt */
   closed: Receipt | null;
   nextId: number;
+  /** Preise auf volle 10 € gerundet, für Monopoly-Geld (1 Schein = 10 €) */
+  monopoly: boolean;
 }
 
 export type DemoAction =
@@ -35,9 +56,15 @@ export type DemoAction =
   | { type: 'remove'; id: number }
   | { type: 'basket'; index: number; now: number }
   | { type: 'close'; bonNr: string; now: number; tse: { signature: string; publicKey: string } }
-  | { type: 'next' };
+  | { type: 'next' }
+  | { type: 'monopoly'; on: boolean };
 
-export const emptyDemo = (merchantId = DEFAULT_DEMO_MERCHANT): DemoState => ({ merchantId, lines: [], startedAt: null, closed: null, nextId: 1 });
+export const emptyDemo = (merchantId = DEFAULT_DEMO_MERCHANT, monopoly = false): DemoState => ({ merchantId, lines: [], startedAt: null, closed: null, nextId: 1, monopoly });
+
+/** Umschalten nur bei leerem Warenkorb, damit ein Bon nicht gemischt gerundete Preise hat */
+export const canToggleMonopoly = (s: DemoState): boolean => !s.closed && s.lines.length === 0;
+
+const priced = (s: DemoState, p: Position): Position => (s.monopoly ? monopolyPosition(p) : p);
 
 export const cartPositions = (s: DemoState): Position[] => s.lines.map((l) => l.position);
 
@@ -56,17 +83,22 @@ export function demoReducer(s: DemoState, a: DemoAction): DemoState {
   if (s.closed && a.type !== 'merchant' && a.type !== 'next') return s;
   switch (a.type) {
     case 'merchant':
-      return demoMerchant(a.id) && a.id !== s.merchantId ? emptyDemo(a.id) : s;
+      return demoMerchant(a.id) && a.id !== s.merchantId ? emptyDemo(a.id, s.monopoly) : s;
+    case 'monopoly':
+      return canToggleMonopoly(s) ? { ...s, monopoly: a.on } : s;
     case 'add': {
       const qty = roundQty(a.qty);
-      if (!fitsLimits(demoPosition(a.item, 1), qty)) return s;
       // Stückware: erneutes Antippen erhöht die Menge; Wiegeware bekommt je Wiegung eine Zeile
       const same = a.item.unit ? undefined : s.lines.find((l) => l.itemId === a.item.id);
       if (same) return demoReducer(s, { type: 'qty', id: same.id, delta: qty });
-      return addLine(s, a.item.id, demoPosition(a.item, qty), a.now);
+      const position = priced(s, demoPosition(a.item, qty));
+      if (!fitsLimits(position, qty)) return s;
+      return addLine(s, a.item.id, position, a.now);
     }
-    case 'free':
-      return fitsLimits(a.position, a.position.qty) ? addLine(s, null, a.position, a.now) : s;
+    case 'free': {
+      const position = priced(s, a.position);
+      return fitsLimits(position, position.qty) ? addLine(s, null, position, a.now) : s;
+    }
     case 'qty': {
       const line = s.lines.find((l) => l.id === a.id);
       const qty = line ? roundQty(line.position.qty + a.delta) : 0;
@@ -106,7 +138,7 @@ export function demoReducer(s: DemoState, a: DemoAction): DemoState {
       };
     }
     case 'next':
-      return emptyDemo(s.merchantId);
+      return emptyDemo(s.merchantId, s.monopoly);
   }
 }
 
@@ -136,7 +168,8 @@ export function sanitizeDemo(v: unknown, merchantFromHash?: string): DemoState {
   const x = (typeof v === 'object' && v !== null ? v : {}) as Record<string, any>;
   const stored = typeof x.merchantId === 'string' && demoMerchant(x.merchantId) ? x.merchantId : DEFAULT_DEMO_MERCHANT;
   // Ein Link auf einen anderen Händler beginnt mit leerem Warenkorb
-  if (merchantFromHash && demoMerchant(merchantFromHash) && merchantFromHash !== stored) return emptyDemo(merchantFromHash);
+  const monopoly = x.monopoly === true;
+  if (merchantFromHash && demoMerchant(merchantFromHash) && merchantFromHash !== stored) return emptyDemo(merchantFromHash, monopoly);
   const lines = (Array.isArray(x.lines) ? x.lines : []).map(sanitizeLine).filter((l): l is CartLine => l !== null);
   const closed = x.closed ? sanitizeReceipt(x.closed) : null;
   return {
@@ -144,7 +177,8 @@ export function sanitizeDemo(v: unknown, merchantFromHash?: string): DemoState {
     lines,
     startedAt: lines.length && typeof x.startedAt === 'number' ? x.startedAt : null,
     closed,
-    nextId: Math.max(typeof x.nextId === 'number' ? x.nextId : 1, ...lines.map((l) => l.id + 1))
+    nextId: Math.max(typeof x.nextId === 'number' ? x.nextId : 1, ...lines.map((l) => l.id + 1)),
+    monopoly
   };
 }
 

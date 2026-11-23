@@ -31,6 +31,8 @@ Alle erzeugten Belege sind Testdaten mit fiktiven Händlerangaben, tragen den Au
 - Bon rechts groß und live mitwachsend; der QR-Code erscheint nach „Bon abschließen“ (BON_NR vom gemeinsamen Zähler), Abschluss erst über 50,00 €
 - „QR groß anzeigen“, „Nächster Kunde“, „In Werkbank öffnen“, Vollbild; Tasten: Enter abschließen, Leertaste nächster Kunde, S QR groß, +/− Bongröße, 0 Standardgröße, Esc schließen
 - Bongröße mit − / + (25–160 %), „Einpassen“ (ganzer Bon ohne Scrollen sichtbar) und „automatisch“ (passt bei jeder neuen Position neu ein); Hinweis, wenn der QR-Code dabei zum Scannen zu klein wird
+- Monopoly-Geld (Schalter, nur bei leerem Warenkorb): 1 Schein = 10 €, alle Preise kaufmännisch auf volle 10 € gerundet (mindestens 10 €), Wiegeware und freie Positionen je Position; Beträge zusätzlich in Scheinen („= 25 M“); Mindestumsatz damit 6 M (über 50 €)
+- Verlauf: jeder abgeschlossene Bon wird lokal im Browser gespeichert; Liste mit Suche und Filter offen/entwertet, Entwerten direkt in der Liste oder in der Detailansicht (immer der ganze Bon, mit Datum und Notiz, zurücknehmbar), Stempel „ENTWERTET“ auf dem Bon, Erstattung als exakte MwSt. der erstattungsfähigen Positionen und als Auszahlung in Monopoly-Scheinen (kaufmännisch gerundet, mindestens 1 M); QR groß anzeigen und nachdrucken; Export/Import als JSON-Datei
 - Eigener Zustand im Browser, unabhängig vom Bon der Werkbank; feste Einstellungen (ECC Q, keine Fehler), Fassung nach dem Umschalter im Kopf
 
 ## Entwicklung

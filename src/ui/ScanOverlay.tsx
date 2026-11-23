@@ -18,7 +18,8 @@ interface Props {
   bonNr: string;
   duplicate: boolean;
   onClose: () => void;
-  onNextBon: () => void;
+  /** Ohne Angabe kein „Nächster Bon“ (z. B. Bon aus dem Verlauf) */
+  onNextBon?: () => void;
   /** Ohne Angabe entfällt „Gleicher Einkauf, neue Nr.“ (Demo-Modus) */
   onRenumber?: () => void;
   nextLabel?: string;
@@ -50,7 +51,7 @@ export function ScanOverlay({ bon, bonNr, duplicate, onClose, onNextBon, onRenum
       if (e.key === 'Escape') onClose();
       else if (e.key === 'ArrowRight') setI((x) => Math.min(x + 1, bon.codes.length - 1));
       else if (e.key === 'ArrowLeft') setI((x) => Math.max(x - 1, 0));
-      else if (e.key === ' ') {
+      else if (e.key === ' ' && onNextBon) {
         e.preventDefault();
         onNextBon();
       } else if ((e.key === 'n' || e.key === 'N') && onRenumber) onRenumber();
@@ -85,7 +86,7 @@ export function ScanOverlay({ bon, bonNr, duplicate, onClose, onNextBon, onRenum
           Größe: {size === 'fill' ? 'bildschirmfüllend' : 'wie Bon'}
         </button>
         {onRenumber && <button onClick={onRenumber}>Gleicher Einkauf, neue Nr. (N)</button>}
-        <button onClick={onNextBon}>{nextLabel} (Leertaste)</button>
+        {onNextBon && <button onClick={onNextBon}>{nextLabel} (Leertaste)</button>}
       </div>
     </div>
   );

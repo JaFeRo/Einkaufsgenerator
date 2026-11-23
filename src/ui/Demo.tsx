@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import {
-  DEFAULT_OPTIONS,
   DEMO_MERCHANTS,
   computeTotals,
   demoCategories,
@@ -23,15 +22,14 @@ import {
 import { receiptJob } from '../print/receiptJob';
 import { printSettings, printerError, send, usePrinter } from '../print/usePrinter';
 import { DEFAULT_MODULE_DOTS } from '../qr/layout';
-import { MAX_POSITION_CENTS, MIN_GROSS_CENTS, canClose, cartPositions, demoReducer, fitsLimits, latin1Friendly, merchantFromHash, sanitizeDemo, type CartLine } from './demoState';
+import { DEMO_OPTIONS, MAX_POSITION_CENTS, MIN_GROSS_CENTS, canClose, canToggleMonopoly, monopolyCents, monopolyNotes, cartPositions, demoReducer, fitsLimits, latin1Friendly, merchantFromHash, sanitizeDemo, type CartLine } from './demoState';
+import { historyApi, useHistory } from './demoHistory';
+import { DemoHistory } from './DemoHistory';
 import { Receipt } from './Receipt';
 import { ScanOverlay } from './ScanOverlay';
 import { KEYS, loadJson, saveJson } from './storage';
 import type { BonCounter } from './useBonCounter';
 import { renderBon, type RenderedBon } from './useCodes';
-
-/** Feste Einstellungen der Demo: ECC Q, keine Fehlerinjektion, Standardgrenze. */
-const DEMO_OPTIONS = { ...DEFAULT_OPTIONS, faults: {} };
 
 const nowSec = () => Math.floor(Date.now() / 1000);
 
@@ -80,6 +78,8 @@ export function Demo({ spec, counter, notify, onOpenInBench }: Props) {
   const [freePrice, setFreePrice] = useState('');
   const [freeVat, setFreeVat] = useState<7 | 19>(19);
   const [scan, setScan] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const history = useHistory();
   const [presenting, setPresenting] = useState(false);
   const [view, setView] = useState(loadView);
   const areaRef = useRef<HTMLElement>(null);
@@ -132,6 +132,17 @@ export function Demo({ spec, counter, notify, onOpenInBench }: Props) {
     document.documentElement.classList.toggle('presenting', presenting);
     return () => document.documentElement.classList.remove('presenting');
   }, [presenting]);
+
+  // Jeder hier abgeschlossene Bon landet im Verlauf (nur direkt nach „Bon abschließen“, nicht beim Neuladen)
+  const justClosed = useRef(false);
+  useEffect(() => {
+    const r = state.closed;
+    if (!r || !justClosed.current) return;
+    justClosed.current = false;
+    const ok = historyApi.record({ merchantId: merchant.id, merchantName: merchant.name, spec, monopoly: state.monopoly, createdAt: Date.now(), receipt: r });
+    if (!ok) notify('Browser-Speicher voll: Bon nicht im Verlauf gespeichert. Bitte den Verlauf exportieren und leeren.');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.closed]);
 
   const positions = useMemo(() => cartPositions(state), [state]);
   const totals = useMemo(() => computeTotals(positions), [positions]);
@@ -206,6 +217,7 @@ export function Demo({ spec, counter, notify, onOpenInBench }: Props) {
       notify((err as Error).message);
       return;
     }
+    justClosed.current = true;
     dispatch({ type: 'close', bonNr, now: nowSec(), tse: fakeTse(prng(newSeed())) });
   };
 
@@ -227,7 +239,7 @@ export function Demo({ spec, counter, notify, onOpenInBench }: Props) {
   };
 
   useEffect(() => {
-    if (scan) return; // Der Scanmodus hat eigene Tasten
+    if (scan || historyOpen) return; // Scanmodus und Verlauf haben eigene Tasten
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target)) return;
       // Kurzbefehle greifen auch, wenn noch ein Button den Fokus hat (dessen Aktion entfällt dann), nur nicht beim Tippen
@@ -315,6 +327,9 @@ export function Demo({ spec, counter, notify, onOpenInBench }: Props) {
     else if (t.bottom > a.bottom || t.top < a.top) area.scrollBy({ top: t.bottom - a.bottom + 48, behavior });
   }, [lineCount, state.closed]);
 
+  const mono = state.monopoly;
+  /** Zusatz „= 25 M“ im Monopoly-Modus */
+  const m = (cents: number) => (mono ? ` · ${monopolyNotes(cents)} M` : '');
   const q = query.trim().toLowerCase();
   const items = merchant.items.filter((i) => (!category || i.category === category) && (!q || i.text.toLowerCase().includes(q)));
   const missing = MIN_GROSS_CENTS - totals.gross;
@@ -323,6 +338,7 @@ export function Demo({ spec, counter, notify, onOpenInBench }: Props) {
   const primary = open ? (
     <button className="btn primary big" onClick={close} disabled={!ready}>
       Bon abschließen · {euro(totals.gross)}
+      {m(totals.gross)}
     </button>
   ) : (
     <button className="btn primary big" onClick={next}>
@@ -354,6 +370,18 @@ export function Demo({ spec, counter, notify, onOpenInBench }: Props) {
           ))}
         </div>
 
+        <div className="row between demo-options">
+          <label className="check" title={canToggleMonopoly(state) ? 'Preise auf volle 10 € runden, damit mit Monopoly-Geld bezahlt werden kann (1 Schein = 10 €)' : 'Umschalten nur bei leerem Warenkorb'}>
+            <input type="checkbox" checked={mono} disabled={!canToggleMonopoly(state)} onChange={(e) => dispatch({ type: 'monopoly', on: e.target.checked })} />
+            <span>
+              Monopoly-Geld <small>1 M = 10 €, Preise auf 10 € gerundet{!canToggleMonopoly(state) ? ' · nur bei leerem Warenkorb umschaltbar' : ''}</small>
+            </span>
+          </label>
+          <button className="btn" onClick={() => setHistoryOpen(true)} title="Erstellte Ausfuhrkassenzettel ansehen und entwerten">
+            Verlauf{history.length > 0 && ` · ${history.length}`}
+          </button>
+        </div>
+
         <div className="section">
           <div className="row between">
             <h3>Artikel</h3>
@@ -372,7 +400,7 @@ export function Demo({ spec, counter, notify, onOpenInBench }: Props) {
           {weighing && (
             <form className="weigh" onSubmit={addWeight}>
               <label className="field">
-                Gewicht in kg · {weighing.text} ({euro(Math.round(weighing.price * 100))}/kg)
+                Gewicht in kg · {weighing.text} ({euro(Math.round(weighing.price * 100))}/kg{mono ? ', Betrag auf 10 € gerundet' : ''})
                 <input className="num" inputMode="decimal" autoFocus placeholder="0,452" value={weight} onChange={(e) => setWeight(e.target.value)} />
               </label>
               <button className="btn primary" type="submit">
@@ -388,8 +416,9 @@ export function Demo({ spec, counter, notify, onOpenInBench }: Props) {
               <button key={i.id} className="item-tile" onClick={() => add(i)} disabled={!open}>
                 <span className="nm">{i.text}</span>
                 <span className="pr">
-                  {euro(Math.round(i.price * 100))}
+                  {mono && !i.unit ? euro(monopolyCents(Math.round(i.price * 100))) : euro(Math.round(i.price * 100))}
                   {i.unit && <small> /kg</small>}
+                  {mono && !i.unit && <small className="m-price"> = {monopolyNotes(monopolyCents(Math.round(i.price * 100)))} M</small>}
                 </span>
                 {(i.unit || i.refundable === false) && <span className="flag">{i.unit ? 'Wiegeware' : 'nicht erstattungsfähig'}</span>}
               </button>
@@ -411,7 +440,7 @@ export function Demo({ spec, counter, notify, onOpenInBench }: Props) {
                 <input value={freeText} maxLength={255} onChange={(e) => setFreeText(e.target.value)} disabled={!open} />
               </label>
               <label className="field">
-                Preis in €
+                Preis in €{mono ? ' (wird auf 10 € gerundet)' : ''}
                 <input className="num" inputMode="decimal" placeholder="0,00" value={freePrice} onChange={(e) => setFreePrice(e.target.value)} disabled={!open} />
               </label>
               <label className="field">
@@ -443,10 +472,15 @@ export function Demo({ spec, counter, notify, onOpenInBench }: Props) {
           )}
           <div className="sumline">
             <span>Summe</span>
-            <span>{euro(totals.gross)}</span>
+            <span>
+              {euro(totals.gross)}
+              {mono && <small className="m-sum"> = {monopolyNotes(totals.gross)} M</small>}
+            </span>
           </div>
           {open && state.lines.length > 0 && missing > 0 && (
-            <p className="min-hint">Noch {euro(missing)} bis zum Mindestumsatz für den Ausfuhrkassenzettel (über 50,00 €)</p>
+            <p className="min-hint">
+              Noch {euro(missing)} bis zum Mindestumsatz für den Ausfuhrkassenzettel (über 50,00 €{mono ? ', mit Monopoly-Geld also mindestens 6 M' : ''})
+            </p>
           )}
           <div className="row">
             {primary}
@@ -534,10 +568,14 @@ export function Demo({ spec, counter, notify, onOpenInBench }: Props) {
       </section>
 
       <div className="demo-bar">
-        <span className="mono">{euro(totals.gross)}</span>
+        <span className="mono">
+          {euro(totals.gross)}
+          {m(totals.gross)}
+        </span>
         {primary}
       </div>
 
+      {historyOpen && <DemoHistory onClose={() => setHistoryOpen(false)} notify={notify} />}
       {scan && closedBon && state.closed && (
         <ScanOverlay bon={closedBon} bonNr={state.closed.bonNr} duplicate={false} onClose={() => setScan(false)} onNextBon={next} nextLabel="Nächster Kunde" />
       )}

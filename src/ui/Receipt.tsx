@@ -19,9 +19,11 @@ interface Props {
   footer?: string[];
   /** Bon noch offen: keine Bon-Nr., keine TSE-Daten, Platzhalter statt QR-Code */
   pending?: boolean;
+  /** Entwertet: Stempel mit diesem Text (z. B. Datum der Entwertung) */
+  voided?: string;
 }
 
-export function Receipt({ receipt, merchant, bon, paper, moduleDots, variant, slogan, footer, pending = false }: Props) {
+export function Receipt({ receipt, merchant, bon, paper, moduleDots, variant, slogan, footer, pending = false, voided }: Props) {
   const t = bon.totals;
   const stars = '*'.repeat(48);
   const demo = variant === 'demo';
@@ -32,6 +34,12 @@ export function Receipt({ receipt, merchant, bon, paper, moduleDots, variant, sl
       style={{ '--print-mm': printableMm(paper) } as CSSProperties}
     >
       <div className="stamp" aria-hidden="true">TESTBELEG</div>
+      {voided && (
+        <div className="stamp voided" role="note">
+          ENTWERTET
+          <small>{voided}</small>
+        </div>
+      )}
       <div className="c b big">{merchant.name}</div>
       <div className="c">{merchant.address}</div>
       <div className="c small">USt-IdNr. {merchant.vatId}</div>
