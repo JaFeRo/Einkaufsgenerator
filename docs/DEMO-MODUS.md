@@ -1,7 +1,7 @@
 # Feature: Demo-Modus („Kasse“) für Präsentationen
 
 > Auftrag an Claude Code. Lies vorher `docs/PLAN.md` und `README.md`.
-> Ziel: ein zusätzlicher Reiter, in dem es so aussieht, als bediene ein Händler (künftiger Nutzer des dAKZ-Verfahrens) seine Kasse. Er tippt einen Einkauf ein, rechts entsteht groß der Kassenbon mit QR-Code, der Kunde scannt ihn mit der eZOLL-App.
+> Ziel: ein zusätzlicher Reiter, in dem es so aussieht, als bediene ein Händler (künftiger Nutzer des dAKZ-Verfahrens) seine Kasse. Er tippt einen Einkauf ein, rechts entsteht groß der Kassenbon mit QR-Code. Diesen scannt der Händler mit der eZOLL-App (Dienst „Ausfuhrkassenzettel“), nachdem er die dAKZ-Karte des Kunden gescannt hat (Spezifikation 1.3, Kap. 2.1; Anleitung auf zoll.de).
 > Die Werkbank („Bons erzeugen“), die Rückprüfung und die Spezifikation bleiben unverändert.
 
 ## 1. Zielbild

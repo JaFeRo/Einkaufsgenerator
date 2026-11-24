@@ -23,7 +23,7 @@ Alle erzeugten Belege sind Testdaten mit fiktiven Händlerangaben, tragen den Au
 - Codes per Kamera, Foto/Screenshot (auch Drag & Drop und Strg+V) oder als Text einlesen
 - Codes eines Bons werden zusammengeführt (1/3, 2/3 …) und gemeinsam geprüft
 - Feldprüfung mit den regulären Ausdrücken der jeweiligen Fassung (in der Rückprüfung automatisch erkannt, auch die Zeichenkodierung), Summenkontrolle, Fehler bei Steuersätzen außer 7 und 19 %, Hinweis bei anderer Fehlerkorrektur als Q
-- Fehler, wenn verschiedene gescannte Bons dieselbe BON_NR tragen
+- Duplikat-Hinweis nach Kap. 2.1, Schritt 5: Warnung, wenn verschiedene gescannte Bons dieselbe BON_NR mit gleichem BON_START und BON_ENDE tragen (Unternehmen und daP stehen nicht im Code); gleiche BON_NR mit anderer Zeit ist kein Duplikat
 
 **Demo** (`#demo`, `#demo/<händler>`) – Kassenansicht für Präsentationen
 - Sieben fiktive Testhändler mit eigenem Sortiment und Bonkopf (Kaufhaus, Mode, Elektro, Parfümerie, Uhren & Schmuck, Feinkost, Sport)

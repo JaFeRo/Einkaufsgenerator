@@ -124,16 +124,22 @@ export class EscPos {
     }
     return this;
   }
-  /** QR-Code als Rasterbild über die ganze Druckbreite, zentriert, mit 4 Modulen Ruhezone. */
+  /**
+   * QR-Code als Rasterbild mit 4 Modulen Ruhezone, nur so breit wie der Code selbst; der Drucker zentriert
+   * ihn (ESC a 1), wie bei python-escpos. Das spart gegenüber der vollen Druckbreite etwa die Hälfte der
+   * Daten, was vor allem über die serielle Leitung den Druck beschleunigt.
+   */
   qrRaster(m: QrMatrix, dots: number, widthDots: number) {
-    const total = m.size + QUIET_MODULES * 2;
-    const left = Math.floor((widthDots - total * dots) / 2);
+    const total = (m.size + QUIET_MODULES * 2) * dots;
+    const width = Math.min(widthDots, Math.ceil(total / 8) * 8);
+    // Rest bis zum vollen Byte rechts weiß; den Code im Bild mittig setzen
+    const left = Math.floor((width - total) / 2);
     const dark = (y: number, x: number) => {
       const mx = Math.floor((x - left) / dots) - QUIET_MODULES;
       const my = Math.floor(y / dots) - QUIET_MODULES;
-      return mx >= 0 && my >= 0 && mx < m.size && my < m.size && m.modules[my][mx];
+      return x >= left && mx >= 0 && my >= 0 && mx < m.size && my < m.size && m.modules[my][mx];
     };
-    return this.raster(widthDots, dark, total * dots);
+    return this.align('center').raster(width, dark, total);
   }
   /**
    * Druckerinterner QR-Befehl (GS ( k, Modell 2). Die Bytes gehen unverändert an den Drucker,

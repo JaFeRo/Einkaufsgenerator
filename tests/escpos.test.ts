@@ -22,6 +22,8 @@ interface Raster {
   bits: Uint8Array;
   /** Byte-Position nach dem letzten Streifen */
   end: number;
+  /** ESC a 1 war beim Druck aktiv */
+  centered: boolean;
 }
 interface Parsed {
   text: number[];
@@ -35,13 +37,15 @@ interface Parsed {
 function parse(b: Uint8Array): Parsed {
   const out: Parsed = { text: [], rasters: [], native: { data: [], printed: 0 }, cuts: 0 };
   let i = 0;
+  let align = 0;
   while (i < b.length) {
     const c = b[i];
     if (c === 0x1b) {
       const cmd = b[i + 1];
       if (cmd === 0x40) i += 2;
       else if (cmd === 0x74) (out.codePage = b[i + 2]), (i += 3);
-      else if (cmd === 0x61 || cmd === 0x45 || cmd === 0x64) i += 3;
+      else if (cmd === 0x61) (align = b[i + 2]), (i += 3);
+      else if (cmd === 0x45 || cmd === 0x64) i += 3;
       else throw new Error(`ESC ${cmd.toString(16)} an ${i}`);
     } else if (c === 0x1c) {
       if (b[i + 1] !== 0x2e) throw new Error(`FS ${b[i + 1]} an ${i}`);
@@ -68,7 +72,7 @@ function parse(b: Uint8Array): Parsed {
           bits.set(data, prev.bits.length);
           prev.bits = bits;
           prev.height += h;
-        } else out.rasters.push({ width: wb * 8, height: h, bits: data.slice(), end: 0 });
+        } else out.rasters.push({ width: wb * 8, height: h, bits: data.slice(), end: 0, centered: align === 1 });
         i += 8 + wb * h;
         out.rasters.at(-1)!.end = i;
       } else if (cmd === 0x28 && b[i + 2] === 0x6b) {
@@ -125,7 +129,10 @@ describe('ESC/POS-Bon', () => {
         expect(p.codePage).toBe(2);
         for (const [k, c] of bon.codes.entries()) {
           const r = p.rasters[k];
-          expect(r.width).toBe(576);
+          // Nur so breit wie der Code mit Ruhezone, auf volle Bytes gerundet; der Drucker zentriert
+          const total = (c.matrix!.size + 8) * rasterDots(c.matrix!, 4, 576);
+          expect(r.width).toBe(Math.ceil(total / 8) * 8);
+          expect(r.centered).toBe(true);
           const res = await decodeRaster(r);
           expect(res, `QR ${c.index}`).toBeTruthy();
           expect(Array.from(res!.bytes)).toEqual(Array.from(c.data));
@@ -137,8 +144,9 @@ describe('ESC/POS-Bon', () => {
     const { receipt, bon } = bonFor('overflow', '1.3');
     const p = parse(receiptJob({ receipt, merchant: MERCHANT, bon, moduleDots: 6, settings: settings({ widthDots: 384 }) }));
     for (const [k, c] of bon.codes.entries()) {
-      expect(p.rasters[k].width).toBe(384);
       const dots = rasterDots(c.matrix!, 6, 384);
+      expect(p.rasters[k].width).toBe(Math.ceil(((c.matrix!.size + 8) * dots) / 8) * 8);
+      expect(p.rasters[k].width).toBeLessThanOrEqual(384);
       expect(p.rasters[k].height).toBe((c.matrix!.size + 8) * dots);
       expect(Array.from((await decodeRaster(p.rasters[k]))!.bytes)).toEqual(Array.from(c.data));
     }

@@ -32,6 +32,13 @@ function groupKey(entry: Entry): string {
   return k?.[0] === 'K' ? [k[3], k[4], k[5], k[6]].join('|') : `ungueltig-${entry.id}`;
 }
 
+/**
+ * Duplikatprüfung nach Kap. 2.1, Schritt 5: BON_NR, Unternehmen, Zeitstempel und daP. Unternehmen und daP
+ * stehen nicht im Code; verglichen werden BON_NR, BON_START und BON_ENDE (K4–K6). Gleiche BON_NR mit
+ * anderer Zeit ist danach kein Duplikat.
+ */
+const sameDupKey = (a: string, b: string) => a.split('|').slice(0, 3).join('|') === b.split('|').slice(0, 3).join('|');
+
 function beep() {
   try {
     const ctx = new AudioContext();
@@ -312,7 +319,7 @@ export function Checker({ notify, spec }: { notify: (m: string) => void; spec: S
           </section>
         )}
         {groups.map((g) => (
-          <BonCard key={g.key} group={g} selected={spec} mode={mode} sameBonNr={groups.filter((o) => o !== g && o.key.split('|')[0] === g.key.split('|')[0] && !o.key.startsWith('ungueltig')).length} />
+          <BonCard key={g.key} group={g} selected={spec} mode={mode} sameBonNr={groups.filter((o) => o !== g && !o.key.startsWith('ungueltig') && sameDupKey(o.key, g.key)).length} />
         ))}
       </div>
     </main>
@@ -340,9 +347,9 @@ function BonCard({ group, sameBonNr, selected, mode }: { group: BonGroup; sameBo
     findings.push({ severity: 'warning', message: `Code entspricht Fassung ${found.version}, oben gewählt ist ${selected}` });
   if (sameBonNr > 0)
     findings.push({
-      severity: 'error',
-      ref: 'K4',
-      message: `BON_NR ${k?.[3]} kommt bei ${sameBonNr} weiteren gescannten Bon${sameBonNr > 1 ? 's' : ''} mit anderem Zeitpunkt oder Betrag vor – die Duplikatsprüfung würde sie zusammenwerfen`
+      severity: 'warning',
+      ref: 'K4–K6',
+      message: `BON_NR, BON_START und BON_ENDE wie bei ${sameBonNr} weiteren gescannten Bon${sameBonNr > 1 ? 's' : ''} mit anderem Betrag – bei gleichem Unternehmen und gleicher daP ein Duplikat nach Kap. 2.1, Schritt 5`
     });
   for (const e of entries) {
     const nr = e.check.records[0]?.[1];
